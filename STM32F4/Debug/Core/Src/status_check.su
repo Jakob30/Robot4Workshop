@@ -1,0 +1,4 @@
+../Core/Src/status_check.c:17:6:HAL_TIM_PeriodElapsedCallback	16	static
+../Core/Src/status_check.c:31:6:checkOverheating	16	static
+../Core/Src/status_check.c:46:6:checkLoad	24	static
+../Core/Src/status_check.c:59:6:checkDriverStatus	24	static

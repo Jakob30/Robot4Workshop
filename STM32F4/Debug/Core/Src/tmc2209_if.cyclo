@@ -1,0 +1,6 @@
+../Core/Src/tmc2209_if.c:43:6:tmc2209_set_uart	1
+../Core/Src/tmc2209_if.c:48:6:tmc2209_set_hardware_enable_pin	1
+../Core/Src/tmc2209_if.c:56:7:tmc2209_enable	1
+../Core/Src/tmc2209_if.c:67:7:tmc2209_disable	1
+../Core/Src/tmc2209_if.c:77:7:tmc2209_write	2
+../Core/Src/tmc2209_if.c:97:11:tmc2209_read	3
