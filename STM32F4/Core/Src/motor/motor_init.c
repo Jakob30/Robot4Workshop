@@ -5,13 +5,13 @@
  *      Author: jakob
  */
 
-#include "motor_init.h"
+#include "motor/motor_init.h"
 
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
-extern TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim12;
+extern TIM_HandleTypeDef htim13;
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart6;
@@ -38,7 +38,7 @@ void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
 	motor1->gpio_ports.dir 		= DIR_1_GPIO_Port;
 	motor1->gpio_ports.mot_en 	= MOT_EN_1_GPIO_Port;
 
-	motor1->tim = htim1;
+	motor1->tim = htim12;
 	motor1->uart = huart1;
 
 	motor1->position_limit = POSITION_LIMIT_M_1;
@@ -71,13 +71,13 @@ void init_motor_2(motor_t *motor2, tmc2209_stepper_driver_t *driver2)
 	motor2->gpio_ports.dir 		= DIR_2_GPIO_Port;
 	motor2->gpio_ports.mot_en 	= MOT_EN_2_GPIO_Port;
 
-	motor2->tim = htim2;
+	motor2->tim = htim13;
 	motor2->uart = huart6;
 
 	motor2->position_limit = POSITION_LIMIT_M_2;
 	motor2->stallGuard_threshold = STALLGUARD_THRESHOLD_M_2;
 
-	tmc2209_set_uart(driver2, huart6);
+	tmc2209_set_uart(driver2, motor2->uart);
 	tmc2209_set_hardware_enable_pin(driver2, motor2->gpio_pins.mot_en, motor2->gpio_ports.mot_en);
 	tmc2209_setup(driver2, 115200, SERIAL_ADDRESS_0);
 	set_micro_steps_per_step(driver2, motor2->microsteps);
@@ -170,7 +170,7 @@ void init_motor_5(motor_t *motor5, tmc2209_stepper_driver_t *driver5)
 	motor5->gpio_ports.dir 		= DIR_5_GPIO_Port;
 	motor5->gpio_ports.mot_en 	= MOT_EN_5_GPIO_Port;
 
-	motor5->tim = htim5;
+	motor5->tim = htim8;
 	motor5->uart = huart5;
 
 	motor5->position_limit = POSITION_LIMIT_M_5;

@@ -29,6 +29,15 @@ typedef struct
 	uint32_t acc_max;
 	uint32_t dec_max;
 
+	uint8_t active_movement_flag;
+	float v; //Monitors the current velocity of stepper motor in µsteps/s
+	int32_t total_steps;
+	int32_t const_steps;
+	int32_t acc_steps;
+	int32_t dec_steps;
+	int32_t step; //Monitors the current step
+	uint32_t cycle; //Monitors current cycle, which is double step size
+
 	uint8_t hold_current_percent;
 	uint8_t run_current_percent;
 

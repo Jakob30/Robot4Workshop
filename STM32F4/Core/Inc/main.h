@@ -72,8 +72,6 @@ void Error_Handler(void);
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
-#define SPRD_5_Pin GPIO_PIN_4
-#define SPRD_5_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
 #define MOT_EN_2_Pin GPIO_PIN_6
@@ -94,30 +92,22 @@ void Error_Handler(void);
 #define STEP_1_GPIO_Port GPIOB
 #define DIR_1_Pin GPIO_PIN_14
 #define DIR_1_GPIO_Port GPIOB
-#define SPRD_1_Pin GPIO_PIN_15
-#define SPRD_1_GPIO_Port GPIOB
 #define STEP_5_Pin GPIO_PIN_8
 #define STEP_5_GPIO_Port GPIOC
 #define DIR_5_Pin GPIO_PIN_9
 #define DIR_5_GPIO_Port GPIOC
 #define DIR_2_Pin GPIO_PIN_8
 #define DIR_2_GPIO_Port GPIOA
-#define SPRD_2_Pin GPIO_PIN_11
-#define SPRD_2_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
-#define SPRD_3_Pin GPIO_PIN_10
-#define SPRD_3_GPIO_Port GPIOC
 #define DIR_3_Pin GPIO_PIN_11
 #define DIR_3_GPIO_Port GPIOC
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 #define DIR_4_Pin GPIO_PIN_4
 #define DIR_4_GPIO_Port GPIOB
-#define SPRD_4_Pin GPIO_PIN_5
-#define SPRD_4_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

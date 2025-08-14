@@ -13,6 +13,7 @@
 
 void writeDisplay(char* str)
 {
+	ssd1306_Init();
 	SSD1306_Font_t font = Font_11x18; //Set font size
 	uint8_t y = 0;
 	int8_t str_length = strlen(str);

@@ -1,6 +1,6 @@
-Core/Src/motor_control.o: ../Core/Src/motor_control.c \
- ../Core/Inc/motor_control.h ../Core/Inc/status_check.h \
- ../Core/Inc/tmc2209.h ../Core/Inc/tmc2209_defines.h ../Core/Inc/main.h \
+Core/Src/motor/status_check.o: ../Core/Src/motor/status_check.c \
+ ../Core/Inc/motor/status_check.h ../Core/Inc/tmc2209.h \
+ ../Core/Inc/tmc2209_defines.h ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  ../Core/Inc/stm32f4xx_hal_conf.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
@@ -32,9 +32,8 @@ Core/Src/motor_control.o: ../Core/Src/motor_control.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
  ../Core/Inc/helper.h ../Core/Inc/ssd1306.h ../Core/Inc/ssd1306_conf.h \
- ../Core/Inc/ssd1306_fonts.h
-../Core/Inc/motor_control.h:
-../Core/Inc/status_check.h:
+ ../Core/Inc/ssd1306_fonts.h ../Core/Inc/main.h
+../Core/Inc/motor/status_check.h:
 ../Core/Inc/tmc2209.h:
 ../Core/Inc/tmc2209_defines.h:
 ../Core/Inc/main.h:
@@ -72,3 +71,4 @@ Core/Src/motor_control.o: ../Core/Src/motor_control.c \
 ../Core/Inc/ssd1306.h:
 ../Core/Inc/ssd1306_conf.h:
 ../Core/Inc/ssd1306_fonts.h:
+../Core/Inc/main.h:

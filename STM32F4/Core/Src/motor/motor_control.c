@@ -4,21 +4,13 @@
  *  Created on: Jul 14, 2025
  *      Author: jakob
  */
-#include "motor_control.h"
+#include "motor/motor_control.h"
 //#define MAX_ACC_STEPS 10000
 
 //Globals
 
-float v; //Monitors the current velocity of stepper motor in µsteps/s
-int32_t total_steps;
-int32_t const_steps;
-int32_t acc_steps;
-int32_t dec_steps;
-int32_t step; //Monitors the current step
-uint32_t cycle; //Monitors current cycle, which is double step size
 //float acc_ramp[MAX_ACC_STEPS]; //To store the acceleration ramp
 
-extern uint8_t active_movement_flag; //Indicates if a motor is active
 extern motor_t *motors[]; //To gain access to motor variables in interrupt service routine
 extern uint8_t status_flag; //Indicates if
 extern TIM_HandleTypeDef htim9;	//
@@ -58,32 +50,32 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	else if (htim->Instance == motors[4]->tim.Instance){ index = 4; }
 
 	//Stop timer and movement if the roboter reaches its destination
-	if (step >= total_steps)
+	if (motors[index]->step >= motors[index]->total_steps)
 	{
 		HAL_TIM_OC_Stop_IT(&motors[index]->tim, TIM_CHANNEL_1);
-		active_movement_flag = 0; //Reset active_movement_flag
+		motors[index]->active_movement_flag = 0;
 		return;
 	}
 
-	if (cycle % 2 == 0) //Change velocity only every other cycle because step only triggers on rising edge
+	if (motors[index]->cycle % 2 == 0) //Change velocity only every other cycle because step only triggers on rising edge
 	{
-		if (step >= 0 && step < acc_steps)
+		if (motors[index]->step >= 0 && motors[index]->step < motors[index]->acc_steps)
 		{
-			v = sqrtf(2 * motors[index]->acc_max * (step + 1));
+			motors[index]->v = sqrtf(2 * motors[index]->acc_max * (motors[index]->step + 1));
 			// v = acc_ramp[step]
 		}
-		else if (const_steps != 0 && step >= acc_steps && step < (total_steps - dec_steps))
-			v = motors[index]->v_max;
-		else if (step >= (total_steps - dec_steps) && step < total_steps)
+		else if (motors[index]->const_steps != 0 && motors[index]->step >= motors[index]->acc_steps && motors[index]->step < (motors[index]->total_steps - motors[index]->dec_steps))
+			motors[index]->v = motors[index]->v_max;
+		else if (motors[index]->step >= (motors[index]->total_steps - motors[index]->dec_steps) && motors[index]->step < motors[index]->total_steps)
 		{
-			v = sqrtf(2 * motors[index]->dec_max * (total_steps - step));
+			motors[index]->v = sqrtf(2 * motors[index]->dec_max * (motors[index]->total_steps - motors[index]->step));
 			// v = acc_ramp[total_steps - step]
 		}
 
-		step++;
+		motors[index]->step++;
 	}
 
-	cycle++;
+	motors[index]->cycle++;
 
 	HAL_GPIO_TogglePin(motors[index]->gpio_ports.step, motors[index]->gpio_pins.step);
 
@@ -97,33 +89,33 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	 *	-> delay in ticks = 1/(2*v)/0.0000005 = 2000000/(2*v)
 	 */
 
-	int32_t delay = 2000000 / (2 * v);
+	int32_t delay = 2000000 / (2 * motors[index]->v);
 	//Add delay to current compare value in register
 	int32_t total_delay = __HAL_TIM_GET_COMPARE(&motors[index]->tim, TIM_CHANNEL_1) + delay;
 	__HAL_TIM_SET_COMPARE(&motors[index]->tim, TIM_CHANNEL_1, total_delay);
 }
 
 /*
- * Initiates motor movement by starting the timer and calculating the acceleration and deceleration steps.
+ * Initiates motor movement by starting the timer and calculating the steps
  */
 void moveDegrees(float degrees, motor_t* motor)
 {
 	tmc2209_enable(motor->driver);
-	total_steps = toSteps(degrees, motor); //Convert degrees to steps
-	acc_steps = (motor->v_max * motor->v_max) / (2 * motor->acc_max); //Calculate total acceleration and deceleration steps
-	dec_steps = (motor->v_max * motor->v_max) / (2 * motor->dec_max);
-	const_steps = total_steps - (acc_steps + dec_steps);
+	motor->total_steps = toSteps(degrees, motor); //Convert degrees to steps
+	motor->acc_steps = (motor->v_max * motor->v_max) / (2 * motor->acc_max); //Calculate total acceleration and deceleration steps
+	motor->dec_steps = (motor->v_max * motor->v_max) / (2 * motor->dec_max);
+	motor->const_steps = motor->total_steps - (motor->acc_steps + motor->dec_steps);
 
-	v = 0;
-	step = 0;
-	cycle = 0;
+	motor->v = 0;
+	motor->step = 0;
+	motor->cycle = 0;
 
 
-	if (const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
+	if (motor->const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
 	{
-		acc_steps = total_steps / 2;
-		dec_steps = total_steps / 2;
-		const_steps = 0;
+		motor->acc_steps = motor->total_steps / 2;
+		motor->dec_steps = motor->total_steps / 2;
+		motor->const_steps = 0;
 	}
 
 /*
@@ -138,13 +130,15 @@ void moveDegrees(float degrees, motor_t* motor)
 	__HAL_TIM_SET_COMPARE(&motor->tim, TIM_CHANNEL_1, 1);
 	HAL_TIM_OC_Start_IT(&motor->tim, TIM_CHANNEL_1);
 
-	active_movement_flag = 1;
+	motor->active_movement_flag = 1;
 
-	HAL_TIM_Base_Start_IT(&htim9);  //Timer for periodical status checks
-
-	status_flag = 0;
-
-	while(active_movement_flag)		//While motor is moving, periodically check driver status
-		checkDriverStatus(motor->driver);
+//	HAL_TIM_Base_Start_IT(&htim9);  //Timer for periodical status checks
+//
+//	status_flag = 0;
+//
+//	while(active_movement_flag)		//While motor is moving, periodically check driver status
+//	{
+//		checkDriverStatus(motor->driver);
+//	}
 }
 

@@ -9,8 +9,8 @@
 #define INC_STATUS_CHECK_H_
 
 #include "tmc2209.h"
-#include "main.h"
 #include "helper.h"
+#include "main.h"
 
 //continuously check status of current acting driver
 //every 100 ms or so

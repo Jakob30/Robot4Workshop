@@ -5,7 +5,7 @@
  *      Author: jakob
  */
 
-#include "status_check.h"
+#include "motor/status_check.h"
 
 uint8_t status_flag;
 extern uint8_t active_movement_flag;
@@ -45,8 +45,9 @@ void checkOverheating(tmc2209_status_t status)
  */
 void checkLoad(uint16_t stallguard_result)
 {
-	char str[4];
+	char str[4] = {'0', '0', '0', '0' };
 	snprintf(str, sizeof(str), "%u", stallguard_result);
+	HAL_GPIO_TogglePin(LED_red_GPIO_Port, LED_red_Pin);
 	writeDisplay(str);
 }
 

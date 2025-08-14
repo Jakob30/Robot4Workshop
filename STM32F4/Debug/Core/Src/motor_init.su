@@ -1,5 +1,0 @@
-../Core/Src/motor_init.c:23:6:init_motor_1	96	static
-../Core/Src/motor_init.c:56:6:init_motor_2	96	static
-../Core/Src/motor_init.c:89:6:init_motor_3	96	static
-../Core/Src/motor_init.c:122:6:init_motor_4	96	static
-../Core/Src/motor_init.c:155:6:init_motor_5	96	static

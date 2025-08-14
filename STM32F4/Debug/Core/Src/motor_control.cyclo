@@ -1,3 +1,0 @@
-../Core/Src/motor_control.c:33:9:toSteps	1
-../Core/Src/motor_control.c:49:6:HAL_TIM_OC_DelayElapsedCallback	15
-../Core/Src/motor_control.c:109:6:moveDegrees	3
