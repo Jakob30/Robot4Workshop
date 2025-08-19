@@ -504,8 +504,10 @@ void tmc2209_initialize(tmc2209_stepper_driver_t *stepper_driver, long serial_ba
 
   minimize_motor_current(stepper_driver);
   tmc2209_disable(stepper_driver);
-  disable_automatic_current_scaling(stepper_driver);
-  disable_automatic_gradient_adaptation(stepper_driver);
+  enable_automatic_current_scaling(stepper_driver);
+  enable_automatic_gradient_adaptation(stepper_driver);
+//  disable_automatic_current_scaling(stepper_driver);
+//  disable_automatic_gradient_adaptation(stepper_driver);
 }
 
 void set_operation_mode_to_serial(tmc2209_stepper_driver_t *stepper_driver, tmc2209_serial_address_t serial_address)

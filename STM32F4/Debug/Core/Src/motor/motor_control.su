@@ -1,3 +1,7 @@
-../Core/Src/motor/motor_control.c:25:9:toSteps	32	static
-../Core/Src/motor/motor_control.c:41:6:HAL_TIM_OC_DelayElapsedCallback	40	static
-../Core/Src/motor/motor_control.c:101:6:moveDegrees	16	static
+../Core/Src/motor/motor_control.c:30:9:toSteps	32	static
+../Core/Src/motor/motor_control.c:46:6:HAL_TIM_OC_DelayElapsedCallback	32	static
+../Core/Src/motor/motor_control.c:114:6:HAL_TIM_PeriodElapsedCallback	24	static
+../Core/Src/motor/motor_control.c:134:6:moveDegrees	16	static
+../Core/Src/motor/motor_control.c:175:6:checkOverheating	16	static
+../Core/Src/motor/motor_control.c:190:6:checkStall	40	static
+../Core/Src/motor/motor_control.c:210:6:checkDriverStatus	24	static

@@ -5,19 +5,24 @@
  *      Author: jakob
  */
 #include "motor/motor_control.h"
-//#define MAX_ACC_STEPS 10000
 
 //Globals
 
-//float acc_ramp[MAX_ACC_STEPS]; //To store the acceleration ramp
-
 extern motor_t *motors[]; //To gain access to motor variables in interrupt service routine
-extern uint8_t status_flag; //Indicates if
-extern TIM_HandleTypeDef htim9;	//
+extern TIM_HandleTypeDef htim9;
 
+#define MOTOR_COUNT 5
+#define VELOCITY_THRESHOLD 200
 /*
  * Function Declaration
  */
+
+int32_t toSteps(float degrees, motor_t* motor);
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
+void checkOverheating(tmc2209_status_t status);
+void checkStall(uint16_t stallguard_result, motor_t* motor);
+void checkDriverStatus(motor_t* motor);
 
 /*
  * Calculates the steps needed to rotate the amount stated in the variable degrees.
@@ -41,43 +46,51 @@ int32_t toSteps(float degrees, motor_t* motor)
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	int8_t index;
+	motor_t* motor;
 
 	//To know which timer and thus which motor caused the interrupt
-	if (htim->Instance == motors[0]->tim.Instance){ index = 0; }
-	else if (htim->Instance == motors[1]->tim.Instance){ index = 1; }
-	else if (htim->Instance == motors[2]->tim.Instance){ index = 2; }
-	else if (htim->Instance == motors[3]->tim.Instance){ index = 3; }
-	else if (htim->Instance == motors[4]->tim.Instance){ index = 4; }
+	if (htim->Instance == motors[0]->motor_control_timer.Instance){ index = 0; }
+	else if (htim->Instance == motors[1]->motor_control_timer.Instance){ index = 1; }
+	else if (htim->Instance == motors[2]->motor_control_timer.Instance){ index = 2; }
+	else if (htim->Instance == motors[3]->motor_control_timer.Instance){ index = 3; }
+	else if (htim->Instance == motors[4]->motor_control_timer.Instance){ index = 4; }
 
-	//Stop timer and movement if the roboter reaches its destination
-	if (motors[index]->step >= motors[index]->total_steps)
+	motor = motors[index];
+
+	//Stop timer and movement if the robot reaches its destination
+	if (motor->step >= motor->total_steps || motor->stall_flag)
 	{
-		HAL_TIM_OC_Stop_IT(&motors[index]->tim, TIM_CHANNEL_1);
-		motors[index]->active_movement_flag = 0;
+		HAL_TIM_OC_Stop_IT(&motor->motor_control_timer, TIM_CHANNEL_1);
+		motor->active_movement_flag = 0;
+		motor->stall_flag = 0;
 		return;
 	}
 
-	if (motors[index]->cycle % 2 == 0) //Change velocity only every other cycle because step only triggers on rising edge
+	if (motor->cycle % 2 == 0) //Change velocity only every other cycle because step only triggers on rising edge
 	{
-		if (motors[index]->step >= 0 && motors[index]->step < motors[index]->acc_steps)
+//		if (motor->stall_flag && motor->step < (motor->step_at_stall + motor->dec_steps_after_stall))
+//		{
+//			motor->v = sqrtf(2 * motor->dec_max * (2 * motor->step_at_stall - motor->step));
+//		}
+		if (motor->step >= 0 && motor->step < motor->acc_steps)
 		{
-			motors[index]->v = sqrtf(2 * motors[index]->acc_max * (motors[index]->step + 1));
+			motor->v = sqrtf(2 * motor->acc_max * (motor->step + 1));
 			// v = acc_ramp[step]
 		}
-		else if (motors[index]->const_steps != 0 && motors[index]->step >= motors[index]->acc_steps && motors[index]->step < (motors[index]->total_steps - motors[index]->dec_steps))
-			motors[index]->v = motors[index]->v_max;
-		else if (motors[index]->step >= (motors[index]->total_steps - motors[index]->dec_steps) && motors[index]->step < motors[index]->total_steps)
+		else if (motor->const_steps != 0 && motor->step >= motor->acc_steps && motor->step < (motor->total_steps - motor->dec_steps))
+			motor->v = motor->v_max;
+		else if (motor->step >= (motor->total_steps - motor->dec_steps) && motor->step < motor->total_steps)
 		{
-			motors[index]->v = sqrtf(2 * motors[index]->dec_max * (motors[index]->total_steps - motors[index]->step));
+			motor->v = sqrtf(2 * motor->dec_max * (motor->total_steps - motor->step));
 			// v = acc_ramp[total_steps - step]
 		}
 
-		motors[index]->step++;
+		motor->step++;
 	}
 
-	motors[index]->cycle++;
+	motor->cycle++;
 
-	HAL_GPIO_TogglePin(motors[index]->gpio_ports.step, motors[index]->gpio_pins.step);
+	HAL_GPIO_TogglePin(motor->gpio_ports.step, motor->gpio_pins.step);
 
 	/*
 	 * 	To reach the desired speed, we need to calculate the delay between two toggles.
@@ -89,10 +102,30 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	 *	-> delay in ticks = 1/(2*v)/0.0000005 = 2000000/(2*v)
 	 */
 
-	int32_t delay = 2000000 / (2 * motors[index]->v);
+	int32_t delay = 2000000 / (2 * motor->v);
 	//Add delay to current compare value in register
-	int32_t total_delay = __HAL_TIM_GET_COMPARE(&motors[index]->tim, TIM_CHANNEL_1) + delay;
-	__HAL_TIM_SET_COMPARE(&motors[index]->tim, TIM_CHANNEL_1, total_delay);
+	int32_t total_delay = __HAL_TIM_GET_COMPARE(&motor->motor_control_timer, TIM_CHANNEL_1) + delay;
+	__HAL_TIM_SET_COMPARE(&motor->motor_control_timer, TIM_CHANNEL_1, total_delay);
+}
+
+/*
+ * Interrupt service routine for timer 9, which periodically invokes status checks.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	for(int i = 0; i < MOTOR_COUNT; i++)
+	{
+		if (htim->Instance == motors[i]->status_check_timer.Instance)
+		{
+			if (motors[i]->active_movement_flag)
+				motors[i]->status_flag = 1;
+			else
+				HAL_TIM_Base_Stop_IT(&motors[i]->status_check_timer);
+
+			break;
+		}
+	}
+//	writeDisplay("HAHA");
 }
 
 /*
@@ -109,7 +142,7 @@ void moveDegrees(float degrees, motor_t* motor)
 	motor->v = 0;
 	motor->step = 0;
 	motor->cycle = 0;
-
+	motor->stall_flag = 0;
 
 	if (motor->const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
 	{
@@ -118,27 +151,76 @@ void moveDegrees(float degrees, motor_t* motor)
 		motor->const_steps = 0;
 	}
 
-/*
-*	for (int i = 0; i < acc_steps; i++)
-*	{
-*		acc_ramp[i] = sqrtf(2 * motor->acc_max * step); //Calculate acc and dec ramp beforehand
-*	}
-*/
-
 	//Start timer in output compare with interrupt
 	HAL_GPIO_WritePin(motor->gpio_ports.step, motor->gpio_pins.step, GPIO_PIN_RESET);
-	__HAL_TIM_SET_COMPARE(&motor->tim, TIM_CHANNEL_1, 1);
-	HAL_TIM_OC_Start_IT(&motor->tim, TIM_CHANNEL_1);
+	__HAL_TIM_SET_COMPARE(&motor->motor_control_timer, TIM_CHANNEL_1, 1);
+	HAL_TIM_OC_Start_IT(&motor->motor_control_timer, TIM_CHANNEL_1);
 
 	motor->active_movement_flag = 1;
 
-//	HAL_TIM_Base_Start_IT(&htim9);  //Timer for periodical status checks
+	HAL_TIM_Base_Start_IT(&motor->status_check_timer);  //Timer for periodical status checks
+
+	motor->status_flag = 0;
+
+	while(motor->active_movement_flag)		//While motor is moving, periodically check driver status
+	{
+		checkDriverStatus(motor);
+	}
+}
+
+
+/*
+ * Work in progress, simple prototype function.
+ */
+void checkOverheating(tmc2209_status_t status)
+{
+	if (status.over_temperature_157c || status.over_temperature_150c || status.over_temperature_143c)
+	{
+		writeDisplay("Critical Overheating!");
+	}
+	else if (status.over_temperature_120c)
+	{
+		writeDisplay("Warning, temperature above 120c");
+	}
+}
+
+/*
+ * Also work in progress, now simply outputs stallguard result to monitor.
+ */
+void checkStall(uint16_t stallguard_result, motor_t* motor)
+{
+
+	if (stallguard_result <= motor->stallGuard_threshold && motor->v > VELOCITY_THRESHOLD)
+	{
+		motor->stall_flag = 1;
+	}
+
+	char str[10];
+	snprintf(str, sizeof(str), "%c:%u", motor->ID, stallguard_result);
+	HAL_GPIO_TogglePin(LED_red_GPIO_Port, LED_red_Pin);
+	writeDisplay(str);
+}
+
+/*
+ * This function is continuously called while a motor is active.
+ * It only does something when status_flag has been set to 1.
+ * Then it calls the checkOverheat and Load functions.
+ */
+
+void checkDriverStatus(motor_t* motor)
+{
+	if (motor->status_flag)
+	{
+//		tmc2209_status_t status;
+		uint16_t stallguard_result;
+
+		motor->status_flag = 0;
+//		status = get_status(motor->driver);
 //
-//	status_flag = 0;
-//
-//	while(active_movement_flag)		//While motor is moving, periodically check driver status
-//	{
-//		checkDriverStatus(motor->driver);
-//	}
+//		checkOverheating(status);
+
+		stallguard_result = get_stall_guard_result(motor->driver);
+		checkStall(stallguard_result, motor);
+	}
 }
 

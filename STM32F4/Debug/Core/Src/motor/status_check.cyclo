@@ -1,4 +1,0 @@
-../Core/Src/motor/status_check.c:17:6:HAL_TIM_PeriodElapsedCallback	3
-../Core/Src/motor/status_check.c:31:6:checkOverheating	5
-../Core/Src/motor/status_check.c:46:6:checkLoad	1
-../Core/Src/motor/status_check.c:60:6:checkDriverStatus	2

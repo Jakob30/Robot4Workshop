@@ -6,18 +6,15 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/motor/motor_control.c \
-../Core/Src/motor/motor_init.c \
-../Core/Src/motor/status_check.c 
+../Core/Src/motor/motor_init.c 
 
 C_DEPS += \
 ./Core/Src/motor/motor_control.d \
-./Core/Src/motor/motor_init.d \
-./Core/Src/motor/status_check.d 
+./Core/Src/motor/motor_init.d 
 
 OBJS += \
 ./Core/Src/motor/motor_control.o \
-./Core/Src/motor/motor_init.o \
-./Core/Src/motor/status_check.o 
+./Core/Src/motor/motor_init.o 
 
 
 # Each subdirectory must supply rules for building sources it contributes
@@ -27,7 +24,7 @@ Core/Src/motor/%.o Core/Src/motor/%.su Core/Src/motor/%.cyclo: ../Core/Src/motor
 clean: clean-Core-2f-Src-2f-motor
 
 clean-Core-2f-Src-2f-motor:
-	-$(RM) ./Core/Src/motor/motor_control.cyclo ./Core/Src/motor/motor_control.d ./Core/Src/motor/motor_control.o ./Core/Src/motor/motor_control.su ./Core/Src/motor/motor_init.cyclo ./Core/Src/motor/motor_init.d ./Core/Src/motor/motor_init.o ./Core/Src/motor/motor_init.su ./Core/Src/motor/status_check.cyclo ./Core/Src/motor/status_check.d ./Core/Src/motor/status_check.o ./Core/Src/motor/status_check.su
+	-$(RM) ./Core/Src/motor/motor_control.cyclo ./Core/Src/motor/motor_control.d ./Core/Src/motor/motor_control.o ./Core/Src/motor/motor_control.su ./Core/Src/motor/motor_init.cyclo ./Core/Src/motor/motor_init.d ./Core/Src/motor/motor_init.o ./Core/Src/motor/motor_init.su
 
 .PHONY: clean-Core-2f-Src-2f-motor
 

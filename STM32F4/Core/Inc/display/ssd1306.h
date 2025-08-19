@@ -14,7 +14,7 @@
 
 _BEGIN_STD_C
 
-#include "ssd1306_conf.h"
+#include <display/ssd1306_conf.h>
 
 
 #if defined(STM32WB)

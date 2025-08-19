@@ -4,7 +4,7 @@
  *  Created on: Jul 29, 2025
  *      Author: jakob
  */
-#include "helper.h"
+#include "display/helper.h"
 
 /*
  * To write to external display with only one parameter, the string.
