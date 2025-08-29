@@ -63,7 +63,6 @@ UART_HandleTypeDef huart6;
 /* USER CODE BEGIN PV */
 motor_t *motors[MOTOR_COUNT];
 
-uint8_t active_movement_flag;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -161,19 +160,47 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
-  active_movement_flag = 0;
   init_motor_1(&motor1, &driver1);
   init_motor_2(&motor2, &driver2);
   init_motor_3(&motor3, &driver3);
   init_motor_4(&motor4, &driver4);
   init_motor_5(&motor5, &driver5);
 
-  tmc2209_enable(motor2.driver);
-  HAL_Delay(3000);
-  moveDegrees(30, &motor2);
-  moveDegrees(30, &motor3);
-  moveDegrees(30, &motor4);
+//  tmc2209_enable(motor3.driver);
+//  moveDegrees(90, &motor2);
+//  moveDegrees(20, &motor4);
+//  moveDegrees(5000, &motor5);
+//  while(motor5.active_movement_flag);
+//
+//  moveDegrees(60, &motor1);
+//
+//  enable_inverse_motor_direction(motor4.driver);
+//  moveDegrees(56, &motor4);
+//
+//  enable_inverse_motor_direction(motor2.driver);
+//  moveDegrees(67, &motor2);
+//
+//  while(motor2.active_movement_flag);
+//
+//  enable_inverse_motor_direction(motor5.driver);
+//  moveDegrees(5000, &motor5);
+//  while(motor5.active_movement_flag);
+//
+//  disable_inverse_motor_direction(motor2.driver);
+//  moveDegrees(90, &motor2);
+//
+//  disable_inverse_motor_direction(motor4.driver);
+//  moveDegrees(20, &motor4);
+//
+//  enable_inverse_motor_direction(motor1.driver);
+//
+//  moveDegrees(60, &motor1);
 
+  HAL_Delay(2000);
+//  enable_inverse_motor_direction(motor5.driver);
+  moveDegrees(8000, &motor5);
+
+//  goHome();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -289,7 +316,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 839;
+  htim1.Init.Prescaler = 83;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -977,7 +1004,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
@@ -989,6 +1016,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA4 PA11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin MOT_EN_2_Pin STEP_2_Pin DIR_2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin|MOT_EN_2_Pin|STEP_2_Pin|DIR_2_Pin;
@@ -1006,17 +1039,28 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PB15 PB5 DIAG_3_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_15|GPIO_PIN_5|DIAG_3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-void toggle_inverse_motor_direction(tmc2209_stepper_driver_t *stepper_driver)
-{
-  stepper_driver->global_config_.shaft = 1 - stepper_driver->global_config_.shaft;
-  write_stored_global_config(stepper_driver);
-}
 
 
 

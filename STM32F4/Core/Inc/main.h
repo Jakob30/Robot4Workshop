@@ -60,6 +60,7 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
+#define B1_EXTI_IRQn EXTI15_10_IRQn
 #define LED_yellow_Pin GPIO_PIN_0
 #define LED_yellow_GPIO_Port GPIOC
 #define LED_green_Pin GPIO_PIN_1
@@ -108,6 +109,8 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 #define DIR_4_Pin GPIO_PIN_4
 #define DIR_4_GPIO_Port GPIOB
+#define DIAG_3_Pin GPIO_PIN_9
+#define DIAG_3_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
