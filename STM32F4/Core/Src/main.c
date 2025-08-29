@@ -195,12 +195,15 @@ int main(void)
 //  enable_inverse_motor_direction(motor1.driver);
 //
 //  moveDegrees(60, &motor1);
+//  tmc2209_enable(motor2.driver);
+//  tmc2209_enable(motor3.driver);
+//
+//  HAL_Delay(2000);
+//  moveDegrees(90, &motor2);
+//  moveDegrees(90, &motor4);
 
-  HAL_Delay(2000);
-//  enable_inverse_motor_direction(motor5.driver);
-  moveDegrees(8000, &motor5);
-
-//  goHome();
+  goHome();
+  grip();
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -10,16 +10,15 @@ extern motor_t *motors[]; //To gain access to motor variables in interrupt servi
 extern TIM_HandleTypeDef htim9;
 
 
-#define MOTOR_COUNT 5
+#define NUMBER_OF_MOTOR 5
 #define ALPHA 0.25f
 
-uint16_t stallguard_result_g;
-float smoothed_result_g;
-float v_g;
-float dynamic_stall_threshold_g;
-
-uint16_t negative_diff_counter_g;
-int consecutive_low_counter_g;
+//uint16_t stallguard_result_g;
+//float smoothed_result_g;
+//float v_g;
+//
+//uint16_t negative_diff_counter_g;
+//int consecutive_low_counter_g;
 
 /*
  * Function Declaration
@@ -32,9 +31,8 @@ void startMovement(motor_t * motor);
 void startStatusChecks(motor_t * motor);
 void checkOverheating(tmc2209_status_t status);
 void checkStall(uint16_t stallguard_result, motor_t* motor);
-void checkDriverStatus(motor_t* motor);
 void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
-
+void initializeDefaults(motor_t * motor);
 /*
  * Calculates the steps needed to rotate the amount stated in the variable degrees.
  */
@@ -49,6 +47,7 @@ static inline void stopMotorMovement(motor_t * motor)
 {
 	HAL_TIM_OC_Stop_IT(&motor->motion.motor_control_timer, TIM_CHANNEL_1);
 	motor->active_movement_flag = 0;
+	initializeDefaults(motor);
 }
 
 static inline void trapezMove(motion_t* mt)
@@ -91,13 +90,13 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	motion_t* mt = &motor->motion;
 
 	//Stop timer and movement if the robot reaches its destination
-	if (mt->step >= mt->total_steps)
+	if (mt->motion_mode == MOTION_TRAPEZ && mt->step >= mt->total_steps)
 	{
 		stopMotorMovement(motor);
 		return;
 	}
 
-	if (mt->cycle % 2 == 0) //Change velocity only every other motion.cycle because motion.step only triggers on rising edge
+	if (mt->cycle % 2 == 0) //Change velocity only every other cycle because step only triggers on rising edge
 	{
 		switch(mt->motion_mode)
 		{
@@ -122,12 +121,12 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 
 	/*
 	 * 	To reach the desired speed, we need to calculate the delay between two toggles.
-	 *	motion.v is in µsteps/s or just 1/s because one µmotion.step is one period.
-	 *	For one period, the duration is 1/motion.v.
-	 *	Between two toggles, it is 1/(2*motion.v).
+	 *	v is in µsteps/s or just 1/s because one µstep is one period.
+	 *	For one period, the duration is 1/v.
+	 *	Between two toggles, it is 1/(2*v).
 	 *	But this is not the answer since the time has to be converted into timer ticks.
 	 *	The timer runs at 2 MHz so we need to divide our current period duration by 1 / 2000000 s or 0.5 µs.
-	 *	-> delay in ticks = 1/(2*motion.v)/0.0000005 = 2000000/(2*motion.v)
+	 *	-> delay in ticks = 1/(2*v)/0.0000005 = 2000000/(2*v)
 	 */
 
 	int32_t delay = 2000000 / (2 * motor->motion.v);
@@ -141,7 +140,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	for(int i = 0; i < MOTOR_COUNT; i++)
+	for(int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
 		if (htim->Instance == motors[i]->status_check_timer.Instance)
 		{
@@ -161,7 +160,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == B1_Pin)  // Prüfen ob User Button
 	{
 		toggle_inverse_motor_direction(motors[4]->driver);
-//		HAL_GPIO_TogglePin(DIR_5_GPIO_Port, DIR_5_Pin);
 	}
 }
 
@@ -197,8 +195,12 @@ void moveDegrees(float degrees, motor_t* motor)
 
 void grip()
 {
-	motor_t * motor5 = motors[2];
-	motion_mode_t motion_mode = MOTION_GRIP;
+	motor_t * motor5 = motors[4];
+
+	disable_inverse_motor_direction(motor5->driver);
+	moveDegrees(10000, motor5);
+	while(motor5->active_movement_flag);
+
 	enable_inverse_motor_direction(motor5->driver);
 
 	if (HAL_GPIO_ReadPin(motor5->gpio_ports.mot_en, motor5->gpio_pins.mot_en) == GPIO_PIN_SET)
@@ -206,18 +208,29 @@ void grip()
 
 	motor5->motion.acc_steps = (motor5->motion.V_MAX * motor5->motion.V_MAX) / (2 * motor5->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
 
+	motion_mode_t motion_mode = MOTION_GRIP;
 	initMovementVars(motor5, motion_mode);
 
 	startMovement(motor5);
 	startStatusChecks(motor5);
-	disable_inverse_motor_direction(motor5->driver);
+	while (motor5->stallguard.stall_flag == 0)
+	{
+		checkDriverStatus(motor5);
+	}
 }
 
 void goHome()
 {
-	for (int i = 0; i < MOTOR_COUNT; i++)
+	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
 		motor_t * motor = motors[i];
+//		if (i == 3)
+//			continue;
+		if (i == 4)
+		{
+			enable_inverse_motor_direction(motor->driver);
+		}
+
 		motion_mode_t motion_mode = MOTION_HOME;
 
 		if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
@@ -230,6 +243,25 @@ void goHome()
 		startMovement(motor);
 		startStatusChecks(motor);
 	}
+
+	while(motors[0]->stallguard.stall_flag == 0
+			|| motors[1]->stallguard.stall_flag == 0
+			|| motors[2]->stallguard.stall_flag == 0
+			|| motors[3]->stallguard.stall_flag == 0
+			|| motors[4]->stallguard.stall_flag == 0)
+	{
+		checkDriverStatus(motors[0]);
+		checkDriverStatus(motors[1]);
+		checkDriverStatus(motors[2]);
+		checkDriverStatus(motors[3]);
+		checkDriverStatus(motors[4]);
+	}
+
+	motors[0]->stallguard.stall_flag = 0;
+	motors[1]->stallguard.stall_flag = 0;
+	motors[2]->stallguard.stall_flag = 0;
+	motors[3]->stallguard.stall_flag = 0;
+	motors[4]->stallguard.stall_flag = 0;
 }
 
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
@@ -256,10 +288,10 @@ void startStatusChecks(motor_t * motor)
 	motor->status_flag = 0;
 	motor->stallguard.previous_smoothed_result = 0;
 
-	while(motor->active_movement_flag)		//While motor is moving, periodically check driver status
-	{
-		checkDriverStatus(motor);
-	}
+//	while(motor->active_movement_flag)		//While motor is moving, periodically check driver status
+//	{
+//		checkDriverStatus(motor);
+//	}
 }
 
 /*
@@ -283,56 +315,40 @@ void checkOverheating(tmc2209_status_t status)
 void checkStall(uint16_t stallguard_result, motor_t* motor)
 {
 	stallguard_t* sg = &motor->stallguard;
-	float diff;
+	uint16_t result = stallguard_result;
+//	float diff;
 
 	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result;
 
-	smoothed_result_g = sg->smoothed_result;
-	stallguard_result_g = stallguard_result;
+//	smoothed_result_g = sg->smoothed_result;
+//	stallguard_result_g = stallguard_result;
+//	v_g = motor->motion.v;
 
-
-	diff = sg->smoothed_result - sg->previous_smoothed_result;
-	v_g = motor->motion.v;
-
+//	diff = sg->smoothed_result - sg->previous_smoothed_result;
 	float k = sg->MAX_STALLGUARD_VALUE / (float) motor->motion.V_MAX;
 
-	dynamic_stall_threshold_g = k * motor->motion.v - sg->STALL_BUFFER;
+	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
 
-
-	switch(sg->state)
+	if (motor->ID == '5')
 	{
-	case NORMAL:
-		if (diff < 0)
-			sg->state = FALL_DOWN;
-		else
+		result = sg->smoothed_result;
+	}
+
+	if (result < dynamic_stall_threshold)
+	{
+		sg->consecutive_low_counter++;
+		if (sg->consecutive_low_counter >= sg->MAX_CONSECUTIVE_LOW)
 		{
-			sg->negative_diff_counter = 0;
-			break;
-		}
-	case FALL_DOWN:
-		sg->negative_diff_counter++;
-		if (sg->negative_diff_counter > sg->MAX_NEGATIVE_DIFF_COUNTER && sg->smoothed_result < dynamic_stall_threshold_g)
-		{
-			sg->consecutive_low_counter++;
-			if (sg->consecutive_low_counter > sg->MAX_CONSECUTIVE_LOW)
-				sg->state = LOW;
-			else
-				break;
-		}
-		else
-		{
+			stopMotorMovement(motor);
+			sg->stall_flag = 1;
 			sg->consecutive_low_counter = 0;
-			sg->state = NORMAL;
-			break;
 		}
-	case LOW:
-		stopMotorMovement(motor);
-		sg->negative_diff_counter = 0;
+	}
+	else
+	{
 		sg->consecutive_low_counter = 0;
 	}
 
-	negative_diff_counter_g = sg->negative_diff_counter;
-	consecutive_low_counter_g = (int)sg->state;
 	sg->previous_smoothed_result = sg->smoothed_result;
 
 }

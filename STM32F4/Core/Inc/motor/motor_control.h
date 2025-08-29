@@ -55,26 +55,19 @@ typedef struct
 	uint8_t RUN_CURRENT_PERCENT;
 }current_settings_t;
 
-typedef enum
-{
-	NORMAL,
-	FALL_DOWN,
-	LOW
-}stall_state_t;
+
 
 typedef struct
 {
 	uint32_t POSITION_LIMIT;
-	uint16_t MAX_NEGATIVE_DIFF_COUNTER;
 	uint16_t MAX_CONSECUTIVE_LOW;
 	float MAX_STALLGUARD_VALUE;
 	uint16_t STALL_BUFFER;
 
+	uint8_t stall_flag;
 	float smoothed_result;
 	float previous_smoothed_result;
 	uint16_t consecutive_low_counter;
-	uint16_t negative_diff_counter;
-	stall_state_t state;
 }stallguard_t;
 
 typedef struct
@@ -107,6 +100,7 @@ typedef struct
  */
 
 void moveDegrees(float degrees, motor_t* motor);
+void checkDriverStatus(motor_t * motor);
 void goHome();
 void grip();
 
