@@ -4,6 +4,7 @@
  *      Author: jakob
  */
 #include "motor/motor_control.h"
+#include "motor/motor_init.h"
 
 //Globals
 extern motor_t *motors[]; //To gain access to motor variables in interrupt service routine
@@ -32,7 +33,8 @@ void startStatusChecks(motor_t * motor);
 void checkOverheating(tmc2209_status_t status);
 void checkStall(uint16_t stallguard_result, motor_t* motor);
 void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
-void initializeDefaults(motor_t * motor);
+//void initializeDefaults(motor_t * motor);
+
 /*
  * Calculates the steps needed to rotate the amount stated in the variable degrees.
  */

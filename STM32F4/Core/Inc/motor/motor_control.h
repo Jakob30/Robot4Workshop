@@ -4,6 +4,9 @@
  *  Created on: Jul 14, 2025
  *      Author: jakob
  */
+#ifndef INC_MOTOR_CONTROL_H_
+#define INC_MOTOR_CONTROL_H_
+
 #include <display/helper.h>
 #include "tmc2209.h"
 #include "main.h"
@@ -55,8 +58,6 @@ typedef struct
 	uint8_t RUN_CURRENT_PERCENT;
 }current_settings_t;
 
-
-
 typedef struct
 {
 	uint32_t POSITION_LIMIT;
@@ -104,3 +105,4 @@ void checkDriverStatus(motor_t * motor);
 void goHome();
 void grip();
 
+#endif /* INC_MOTOR_CONTROL_H_ */

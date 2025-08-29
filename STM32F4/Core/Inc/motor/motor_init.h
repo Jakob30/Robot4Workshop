@@ -16,6 +16,7 @@ void init_motor_2(motor_t* motor, tmc2209_stepper_driver_t* driver);
 void init_motor_3(motor_t* motor, tmc2209_stepper_driver_t* driver);
 void init_motor_4(motor_t* motor, tmc2209_stepper_driver_t* driver);
 void init_motor_5(motor_t* motor, tmc2209_stepper_driver_t* driver);
+void initializeDefaults(motor_t * motor);
 
 
 #endif /* INC_MOTOR_INIT_H_ */

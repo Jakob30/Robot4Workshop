@@ -27,8 +27,6 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart5;
 
-void initializeDefaults(motor_t * motor);
-
 void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
 {
 	initializeDefaults(motor1);
