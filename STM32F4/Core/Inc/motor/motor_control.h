@@ -34,6 +34,12 @@ typedef enum {
 	MOTION_GRIP
 } motion_mode_t;
 
+typedef enum {
+	VERTICAL_UP,
+	HORIZONTAL,
+	VERTICAL_DOWN
+} gripper_direction_t;
+
 typedef struct
 {
 	uint32_t V_MAX;
@@ -47,6 +53,9 @@ typedef struct
 	int32_t dec_steps;
 	int32_t step; //Monitors the current step
 	uint32_t cycle; //Monitors current cycle, which is double step size
+
+
+	int32_t position;
 
 	motion_mode_t motion_mode;
 	TIM_HandleTypeDef motor_control_timer;
@@ -101,7 +110,10 @@ typedef struct
  */
 
 void moveDegrees(float degrees, motor_t* motor);
+void moveAbsolute(float degrees, motor_t* motor);
 void checkDriverStatus(motor_t * motor);
+void movePolar(float theta, float r, float z, gripper_direction_t gripper_direction);
+void moveToCoordinates(float x, float y, float z, gripper_direction_t gripper_direction);
 void goHome();
 void grip();
 

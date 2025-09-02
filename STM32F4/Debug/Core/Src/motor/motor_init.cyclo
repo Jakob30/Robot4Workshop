@@ -1,6 +1,6 @@
-../Core/Src/motor/motor_init.c:32:6:init_motor_1	1
-../Core/Src/motor/motor_init.c:73:6:init_motor_2	1
-../Core/Src/motor/motor_init.c:128:6:init_motor_3	1
-../Core/Src/motor/motor_init.c:171:6:init_motor_4	1
-../Core/Src/motor/motor_init.c:215:6:init_motor_5	1
-../Core/Src/motor/motor_init.c:258:6:initializeDefaults	1
+../Core/Src/motor/motor_init.c:30:6:init_motor_1	1
+../Core/Src/motor/motor_init.c:71:6:init_motor_2	1
+../Core/Src/motor/motor_init.c:126:6:init_motor_3	1
+../Core/Src/motor/motor_init.c:169:6:init_motor_4	1
+../Core/Src/motor/motor_init.c:213:6:init_motor_5	1
+../Core/Src/motor/motor_init.c:256:6:initializeDefaults	1

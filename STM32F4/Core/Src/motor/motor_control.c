@@ -14,6 +14,12 @@ extern TIM_HandleTypeDef htim9;
 #define NUMBER_OF_MOTOR 5
 #define ALPHA 0.25f
 
+//Point to Point Globals
+#define LENGTH_SEGMENT_1 210
+#define LENGTH_SEGMENT_2 160
+#define LENGTH_SEGMENT_3 160
+#define LENGTH_SEGMENT_4 112
+
 //uint16_t stallguard_result_g;
 //float smoothed_result_g;
 //float v_g;
@@ -27,6 +33,7 @@ extern TIM_HandleTypeDef htim9;
 int32_t toSteps(float degrees, motor_t* motor);
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
+void toPolar(float x, float y, float * theta_p, float * r_p);
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode);
 void startMovement(motor_t * motor);
 void startStatusChecks(motor_t * motor);
@@ -115,6 +122,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 			break;
 		}
 		mt->step++;
+		mt->position++;
 	}
 
 	mt->cycle++;
@@ -165,6 +173,48 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
+void moveAbsolute(float degrees, motor_t* motor)
+{
+	if (degrees < 0)
+		return;
+
+	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
+		tmc2209_enable(motor->driver);
+
+	int actualSteps = toSteps(degrees, motor); //Convert degrees to steps
+
+	if (actualSteps > motor->motion.position)
+	{
+		enable_inverse_motor_direction(motor->driver);
+		motor->motion.total_steps = actualSteps - motor->motion.position;
+	}
+	else
+	{
+		disable_inverse_motor_direction(motor->driver);
+		motor->motion.total_steps = motor->motion.position - actualSteps;
+	}
+
+	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
+	motor->motion.dec_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.DEC_MAX);
+	motor->motion.const_steps = motor->motion.total_steps - (motor->motion.acc_steps + motor->motion.dec_steps);
+
+	motion_mode_t motion_mode = MOTION_TRAPEZ;
+
+	initMovementVars(motor, motion_mode);
+
+	if (motor->motion.const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
+	{
+		motor->motion.acc_steps = motor->motion.total_steps / 2;
+		motor->motion.dec_steps = motor->motion.total_steps / 2;
+		motor->motion.const_steps = 0;
+	}
+
+	//Start timer in output compare with interrupt
+	startMovement(motor);
+
+	startStatusChecks(motor);
+}
+
 /*
  * Initiates motor movement by starting the timer and calculating the steps
  */
@@ -172,6 +222,14 @@ void moveDegrees(float degrees, motor_t* motor)
 {
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
+
+	if (degrees < 0)
+	{
+		enable_inverse_motor_direction(motor->driver);
+		degrees = degrees * (-1);
+	}
+	else
+		disable_inverse_motor_direction(motor->driver);
 
 	motor->motion.total_steps = toSteps(degrees, motor); //Convert degrees to steps
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
@@ -193,6 +251,77 @@ void moveDegrees(float degrees, motor_t* motor)
 	startMovement(motor);
 
 	startStatusChecks(motor);
+}
+
+void toPolar(float x, float y, float * theta_p, float * r_p)
+{
+	if (x < 0 && y > 0)
+		*theta_p = atan(y/x);
+	else if (x > 0 && y > 0)
+		*theta_p = atan (x/y) + 90;
+	else if (x > 0 && y > 0)
+		*theta_p = atan (y/x) + 180;
+	else if (x > 0 && y > 0)
+		*theta_p = atan (x/y) + 270;
+
+	*r_p = sqrtf(x*x + y*y);
+}
+
+void movePolar(float theta, float r, float z, gripper_direction_t gripper_direction)
+{
+	uint32_t length_segment_3_adjusted;
+	switch(gripper_direction)
+	{
+	case VERTICAL_UP:
+		z += LENGTH_SEGMENT_4;
+		length_segment_3_adjusted = LENGTH_SEGMENT_3;
+		break;
+	case HORIZONTAL:
+		r += LENGTH_SEGMENT_4;
+		length_segment_3_adjusted = LENGTH_SEGMENT_3 + LENGTH_SEGMENT_4;
+		break;
+	case VERTICAL_DOWN:
+		z -= LENGTH_SEGMENT_4;
+		length_segment_3_adjusted = LENGTH_SEGMENT_3;
+		break;
+	}
+	float phi1, phi2, phi3, phi4;
+	phi1 = theta;
+
+	phi3 = acos(((r*r) - LENGTH_SEGMENT_1 + LENGTH_SEGMENT_2 - (z*z)) / (2 * LENGTH_SEGMENT_1 * LENGTH_SEGMENT_2));
+	float d = sqrtf(r*r + abs(z-LENGTH_SEGMENT_1) * abs(z-LENGTH_SEGMENT_1));
+
+	float gamma = acos(d / sqrtf((r*r) + (z*z)));
+	float beta = atan(length_segment_3_adjusted * sin(phi3) / (LENGTH_SEGMENT_2 + cos(phi3)*length_segment_3_adjusted));
+
+	if (z >= LENGTH_SEGMENT_1)
+		phi2 = 90 - gamma - beta;
+	else
+		phi2 = 90 + gamma -beta;
+
+	switch(gripper_direction)
+	{
+	case VERTICAL_UP:
+		phi4 = 180 - phi3 - phi2;
+	case HORIZONTAL:
+		phi4 = 0;
+	case VERTICAL_DOWN:
+		phi4 = 270 - phi3 - phi2;
+	}
+
+	moveAbsolute(phi1, motors[0]);
+	moveAbsolute(phi2, motors[1]);
+	moveAbsolute(phi3, motors[2]);
+	moveAbsolute(phi4, motors[3]);
+}
+
+void moveToCoordinates(float x, float y, float z, gripper_direction_t gripper_direction)
+{
+	float theta;
+	float r;
+
+	toPolar(x, y, &theta, &r);
+	movePolar(theta, r, z, gripper_direction);
 }
 
 void grip()
@@ -223,11 +352,12 @@ void grip()
 
 void goHome()
 {
+	writeDisplay("Homing...");
 	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
 		motor_t * motor = motors[i];
-//		if (i == 3)
-//			continue;
+		if (i == 3)
+			continue;
 		if (i == 4)
 		{
 			enable_inverse_motor_direction(motor->driver);
@@ -249,7 +379,7 @@ void goHome()
 	while(motors[0]->stallguard.stall_flag == 0
 			|| motors[1]->stallguard.stall_flag == 0
 			|| motors[2]->stallguard.stall_flag == 0
-			|| motors[3]->stallguard.stall_flag == 0
+//			|| motors[3]->stallguard.stall_flag == 0
 			|| motors[4]->stallguard.stall_flag == 0)
 	{
 		checkDriverStatus(motors[0]);
@@ -264,6 +394,14 @@ void goHome()
 	motors[2]->stallguard.stall_flag = 0;
 	motors[3]->stallguard.stall_flag = 0;
 	motors[4]->stallguard.stall_flag = 0;
+
+	motors[0]->motion.position = 1245;
+	motors[1]->motion.position = 0;
+	motors[2]->motion.position = 0;
+	motors[3]->motion.position = 0;
+	motors[4]->motion.position = 0;
+
+	writeDisplay("Homing finished");
 }
 
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
