@@ -86,7 +86,6 @@ static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
-void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
 
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 /* USER CODE END PFP */

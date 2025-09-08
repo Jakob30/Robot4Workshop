@@ -29,8 +29,8 @@ typedef struct
 }GPIO_Pins_t;
 
 typedef enum {
-    MOTION_TRAPEZ,
-    MOTION_HOME,
+  MOTION_TRAPEZ,
+	MOTION_HOME,
 	MOTION_GRIP
 } motion_mode_t;
 
@@ -116,5 +116,6 @@ void movePolar(float theta, float r, float z, gripper_direction_t gripper_direct
 void moveToCoordinates(float x, float y, float z, gripper_direction_t gripper_direction);
 void goHome();
 void grip();
+void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
 
 #endif /* INC_MOTOR_CONTROL_H_ */

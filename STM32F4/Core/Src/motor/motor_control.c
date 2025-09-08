@@ -59,6 +59,49 @@ static inline void stopMotorMovement(motor_t * motor)
 	initializeDefaults(motor);
 }
 
+/*
+ * Trapezoidal motion profile (TrapezMove) – physical derivation
+ *
+ * The motion is divided into 3 phases:
+ *   1) Acceleration: from v=0 to v_max with constant acceleration a_acc
+ *   2) Constant velocity: v = v_max (if total distance is large enough)
+ *   3) Deceleration: from v_max back to 0 with constant deceleration a_dec
+ *
+ * Fundamental kinematic relations:
+ *   v = a * t
+ *   s = 0.5 * a * t^2
+ *   v^2 = 2 * a * s    (key equation for ramps)
+ *
+ * Acceleration phase:
+ *   t_acc = v_max / a_acc
+ *   s_acc = v_max^2 / (2 * a_acc)
+ *
+ * Deceleration phase:
+ *   t_dec = v_max / a_dec
+ *   s_dec = v_max^2 / (2 * a_dec)
+ *
+ * Constant velocity phase (if present. It won't be present if total distance isn't large enough):
+ *   s_const = s_total - (s_acc + s_dec)
+ *
+ * If s_const >= 0 → trapezoidal profile (true trapez)
+ * If s_const < 0  → triangular profile (no constant section)
+ *
+ * For the triangular profile:
+ *   s_total = s_acc + s_dec
+ *   s_acc = v_peak^2 / (2 * a_acc)
+ *   s_dec = v_peak^2 / (2 * a_dec)
+ *
+ * Solve for v_peak:
+ *   v_peak = sqrt( (2 * a_acc * a_dec) / (a_acc + a_dec) * s_total )
+ *
+ * Summary of implementation:
+ *   - Precompute acc_steps, dec_steps, const_steps based on desired v_max, a_acc, a_dec.
+ *   - If const_steps < 0, recalculate acc_steps, dec_steps using v_peak and set const_steps=0.
+ *   - Online velocity update:
+ *       Accel: v = sqrt(2 * a_acc * s)
+ *       Const: v = v_max
+ *       Decel: v = sqrt(2 * a_dec * s_remaining)
+ */
 static inline void trapezMove(motion_t* mt)
 {
 	if (mt->step >= 0 && mt->step < mt->acc_steps)
@@ -112,7 +155,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 		case MOTION_TRAPEZ:
 			trapezMove(mt);
 			break;
-		case MOTION_HOME:
+		case MOTION_HOME:	//Since we don't know the exact distance to move in these 2 following cases, there's no deceleration
 		case MOTION_GRIP:
 			if (mt->step >= 0 && mt->step < mt->acc_steps)
 				mt->v = sqrtf(2 * mt->ACC_MAX * (mt->step + 1));
@@ -167,7 +210,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if (GPIO_Pin == B1_Pin)  // Prüfen ob User Button
+	if (GPIO_Pin == B1_Pin)  // Check if User Button
 	{
 		toggle_inverse_motor_direction(motors[4]->driver);
 	}
@@ -216,7 +259,12 @@ void moveAbsolute(float degrees, motor_t* motor)
 }
 
 /*
- * Initiates motor movement by starting the timer and calculating the steps
+ * Initiates motor movement by:
+ *   - enabling the driver if needed
+ *   - converting angle to total steps
+ *   - calculating acc_steps, dec_steps, const_steps
+ *   - adjusting to triangle profile if total steps are too short
+ *   - starting the timer for output compare with interrupt
  */
 void moveDegrees(float degrees, motor_t* motor)
 {
@@ -240,11 +288,20 @@ void moveDegrees(float degrees, motor_t* motor)
 
 	initMovementVars(motor, motion_mode);
 
-	if (motor->motion.const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
+	if (motor->motion.const_steps < 0)  // If acceleration steps + deceleration steps exceed total steps -> trapezoid not possible -> triangle profile
 	{
-		motor->motion.acc_steps = motor->motion.total_steps / 2;
-		motor->motion.dec_steps = motor->motion.total_steps / 2;
-		motor->motion.const_steps = 0;
+	    // Compute peak velocity based on available distance (triangle case)
+	    float v_peak = sqrtf((2.0f * motor->motion.ACC_MAX * motor->motion.DEC_MAX) /
+	                         (motor->motion.ACC_MAX + motor->motion.DEC_MAX) *
+	                         (float)motor->motion.total_steps);
+
+	    // Recalculate acceleration and deceleration steps for triangle profile
+	    motor->motion.acc_steps = (uint32_t)(v_peak * v_peak / (2.0f * motor->motion.ACC_MAX));
+	    motor->motion.dec_steps = motor->motion.total_steps - motor->motion.acc_steps;
+	    motor->motion.const_steps = 0;
+
+	    // Adjust maximum velocity to the achievable peak
+	    motor->motion.V_MAX = v_peak;
 	}
 
 	//Start timer in output compare with interrupt
@@ -330,14 +387,14 @@ void grip()
 
 	disable_inverse_motor_direction(motor5->driver);
 	moveDegrees(10000, motor5);
-	while(motor5->active_movement_flag);
+	while(motor5->active_movement_flag); //wait until movement finished
 
 	enable_inverse_motor_direction(motor5->driver);
 
 	if (HAL_GPIO_ReadPin(motor5->gpio_ports.mot_en, motor5->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor5->driver);
 
-	motor5->motion.acc_steps = (motor5->motion.V_MAX * motor5->motion.V_MAX) / (2 * motor5->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
+	motor5->motion.acc_steps = (motor5->motion.V_MAX * motor5->motion.V_MAX) / (2 * motor5->motion.ACC_MAX); //Calculate total acceleration steps
 
 	motion_mode_t motion_mode = MOTION_GRIP;
 	initMovementVars(motor5, motion_mode);
@@ -368,7 +425,7 @@ void goHome()
 		if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 			tmc2209_enable(motor->driver);
 
-		motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
+		motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration steps
 
 		initMovementVars(motor, motion_mode);
 
@@ -458,7 +515,7 @@ void checkStall(uint16_t stallguard_result, motor_t* motor)
 	uint16_t result = stallguard_result;
 //	float diff;
 
-	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result;
+	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result; //Exponential smoothing/exponential moving average (EMA) filter
 
 //	smoothed_result_g = sg->smoothed_result;
 //	stallguard_result_g = stallguard_result;
