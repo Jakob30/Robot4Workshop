@@ -201,12 +201,8 @@ int main(void)
 //  moveDegrees(90, &motor2);
 //  moveDegrees(90, &motor4);
 
-
-//  moveDegrees(90, &motor3);
-  enable_inverse_motor_direction(motor5.driver);
-  moveDegrees(9000, &motor5);
-
-//  grip();
+  goHome();
+  grip();
 //  gripper_direction_t gripper_direction = VERTICAL_DOWN;
 
 //  moveToCoordinates(10.0, 10.0, 10.0, gripper_direction);
@@ -217,7 +213,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
 //	  HAL_Delay(2000);
     /* USER CODE END WHILE */
 

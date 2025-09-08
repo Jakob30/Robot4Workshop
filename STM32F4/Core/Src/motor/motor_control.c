@@ -20,12 +20,14 @@ extern TIM_HandleTypeDef htim9;
 #define LENGTH_SEGMENT_3 160
 #define LENGTH_SEGMENT_4 112
 
-//uint16_t stallguard_result_g;
-//float smoothed_result_g;
-//float v_g;
+uint16_t stallguard_result_g;
+float smoothed_result_g;
+float v_g;
+float dynamic_threshold_g;
 //
 //uint16_t negative_diff_counter_g;
 //int consecutive_low_counter_g;
+
 
 /*
  * Function Declaration
@@ -413,8 +415,8 @@ void goHome()
 	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
 		motor_t * motor = motors[i];
-		if (i == 3)
-			continue;
+//		if (i == 3)
+//			continue;
 		if (i == 4)
 		{
 			enable_inverse_motor_direction(motor->driver);
@@ -436,7 +438,7 @@ void goHome()
 	while(motors[0]->stallguard.stall_flag == 0
 			|| motors[1]->stallguard.stall_flag == 0
 			|| motors[2]->stallguard.stall_flag == 0
-//			|| motors[3]->stallguard.stall_flag == 0
+			|| motors[3]->stallguard.stall_flag == 0
 			|| motors[4]->stallguard.stall_flag == 0)
 	{
 		checkDriverStatus(motors[0]);
@@ -517,19 +519,23 @@ void checkStall(uint16_t stallguard_result, motor_t* motor)
 
 	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result; //Exponential smoothing/exponential moving average (EMA) filter
 
-//	smoothed_result_g = sg->smoothed_result;
-//	stallguard_result_g = stallguard_result;
-//	v_g = motor->motion.v;
+	smoothed_result_g = sg->smoothed_result;
+	stallguard_result_g = stallguard_result;
+	v_g = motor->motion.v;
 
 //	diff = sg->smoothed_result - sg->previous_smoothed_result;
 	float k = sg->MAX_STALLGUARD_VALUE / (float) motor->motion.V_MAX;
 
-	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
-
 	if (motor->ID == '5')
 	{
 		result = sg->smoothed_result;
+		if (motor->motion.motion_mode == MOTION_GRIP)
+			sg->STALL_BUFFER = STALL_GRIP_BUFFER_M_5;
 	}
+
+	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
+	dynamic_threshold_g = dynamic_stall_threshold;
+
 
 	if (result < dynamic_stall_threshold)
 	{
