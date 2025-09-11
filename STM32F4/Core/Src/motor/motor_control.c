@@ -20,10 +20,10 @@ extern TIM_HandleTypeDef htim9;
 #define LENGTH_SEGMENT_3 160
 #define LENGTH_SEGMENT_4 112
 
-uint16_t stallguard_result_g;
-float smoothed_result_g;
-float v_g;
-float dynamic_threshold_g;
+//uint16_t stallguard_result_g;
+//float smoothed_result_g;
+//float v_g;
+//float dynamic_threshold_g;
 //
 //uint16_t negative_diff_counter_g;
 //int consecutive_low_counter_g;
@@ -42,6 +42,11 @@ void startStatusChecks(motor_t * motor);
 void checkOverheating(tmc2209_status_t status);
 void checkStall(uint16_t stallguard_result, motor_t* motor);
 void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
+void moveDegrees(float degrees, motor_t* motor);
+void openGripper();
+void grip();
+void goHome();
+void checkDriverStatus(motor_t* motor);
 //void initializeDefaults(motor_t * motor);
 
 /*
@@ -273,13 +278,15 @@ void moveDegrees(float degrees, motor_t* motor)
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
 
-	if (degrees < 0)
+	if (degrees + 1e-9 < 0)
 	{
 		enable_inverse_motor_direction(motor->driver);
 		degrees = degrees * (-1);
 	}
-	else
+	else if (degrees - 1e-9 > 0)
 		disable_inverse_motor_direction(motor->driver);
+	else
+		return;
 
 	motor->motion.total_steps = toSteps(degrees, motor); //Convert degrees to steps
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
@@ -383,13 +390,19 @@ void moveToCoordinates(float x, float y, float z, gripper_direction_t gripper_di
 	movePolar(theta, r, z, gripper_direction);
 }
 
+void openGripper()
+{
+	motor_t * motor5 = motors[4];
+	if (motor5->active_movement_flag)
+		return;
+
+	disable_inverse_motor_direction(motor5->driver);
+	moveDegrees(12240, motor5);
+}
+
 void grip()
 {
 	motor_t * motor5 = motors[4];
-
-	disable_inverse_motor_direction(motor5->driver);
-	moveDegrees(10000, motor5);
-	while(motor5->active_movement_flag); //wait until movement finished
 
 	enable_inverse_motor_direction(motor5->driver);
 
@@ -441,6 +454,8 @@ void goHome()
 			|| motors[3]->stallguard.stall_flag == 0
 			|| motors[4]->stallguard.stall_flag == 0)
 	{
+		if (motors[4]->stallguard.stall_flag == 1)
+			openGripper();
 		checkDriverStatus(motors[0]);
 		checkDriverStatus(motors[1]);
 		checkDriverStatus(motors[2]);
@@ -519,22 +534,22 @@ void checkStall(uint16_t stallguard_result, motor_t* motor)
 
 	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result; //Exponential smoothing/exponential moving average (EMA) filter
 
-	smoothed_result_g = sg->smoothed_result;
-	stallguard_result_g = stallguard_result;
-	v_g = motor->motion.v;
+//	smoothed_result_g = sg->smoothed_result;
+//	stallguard_result_g = stallguard_result;
+//	v_g = motor->motion.v;
 
 //	diff = sg->smoothed_result - sg->previous_smoothed_result;
 	float k = sg->MAX_STALLGUARD_VALUE / (float) motor->motion.V_MAX;
 
 	if (motor->ID == '5')
 	{
-		result = sg->smoothed_result;
+		result = sg->smoothed_result;	//Since the stall values from Motor 5 so noisy, they need to be smoothed
 		if (motor->motion.motion_mode == MOTION_GRIP)
-			sg->STALL_BUFFER = STALL_GRIP_BUFFER_M_5;
+			sg->STALL_BUFFER = STALL_GRIP_BUFFER_M_5;		//Bigger Buffer for gripping than normal motion, as Motor has to grasp the object stronger to hold/pick it up
 	}
 
 	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
-	dynamic_threshold_g = dynamic_stall_threshold;
+//	dynamic_threshold_g = dynamic_stall_threshold;
 
 
 	if (result < dynamic_stall_threshold)
