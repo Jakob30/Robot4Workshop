@@ -278,15 +278,15 @@ void moveDegrees(float degrees, motor_t* motor)
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
 
-	if (degrees + 1e-9 < 0)
+	if (fabs(degrees) < 1e-5)
+	    return;
+	else if (degrees < 0)
 	{
-		enable_inverse_motor_direction(motor->driver);
-		degrees = degrees * (-1);
+	    enable_inverse_motor_direction(motor->driver);
+	    degrees = degrees * (-1);
 	}
-	else if (degrees - 1e-9 > 0)
-		disable_inverse_motor_direction(motor->driver);
 	else
-		return;
+	    disable_inverse_motor_direction(motor->driver);
 
 	motor->motion.total_steps = toSteps(degrees, motor); //Convert degrees to steps
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
@@ -309,8 +309,6 @@ void moveDegrees(float degrees, motor_t* motor)
 	    motor->motion.dec_steps = motor->motion.total_steps - motor->motion.acc_steps;
 	    motor->motion.const_steps = 0;
 
-	    // Adjust maximum velocity to the achievable peak
-	    motor->motion.V_MAX = v_peak;
 	}
 
 	//Start timer in output compare with interrupt
@@ -424,6 +422,8 @@ void grip()
 
 void goHome()
 {
+	uint8_t opened_gripper_flag = 0;
+
 	writeDisplay("Homing...");
 	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
@@ -452,16 +452,23 @@ void goHome()
 			|| motors[1]->stallguard.stall_flag == 0
 			|| motors[2]->stallguard.stall_flag == 0
 			|| motors[3]->stallguard.stall_flag == 0
-			|| motors[4]->stallguard.stall_flag == 0)
+			|| motors[4]->stallguard.stall_flag == 0
+			|| opened_gripper_flag == 0) //If there is no flag and motors[4]->stallguard.stall_flag == 1 (and every other motors already stalled),
+										// while loop breaks -> so openGripper() isn't called. It make sure even if motor 5 is the last one stalled, openGripper() always called.
 	{
-		if (motors[4]->stallguard.stall_flag == 1)
+		if (motors[4]->stallguard.stall_flag == 1 && opened_gripper_flag == 0) //After homing, gripper is closed. Flag = 1 if openGripper() is called
+		{
+			opened_gripper_flag = 1;
 			openGripper();
+		}
 		checkDriverStatus(motors[0]);
 		checkDriverStatus(motors[1]);
 		checkDriverStatus(motors[2]);
 		checkDriverStatus(motors[3]);
 		checkDriverStatus(motors[4]);
 	}
+
+	writeDisplay("Homing finished");
 
 	motors[0]->stallguard.stall_flag = 0;
 	motors[1]->stallguard.stall_flag = 0;
@@ -475,7 +482,9 @@ void goHome()
 	motors[3]->motion.position = 0;
 	motors[4]->motion.position = 0;
 
-	writeDisplay("Homing finished");
+	while (motors[4] -> active_movement_flag){} //wait until openGripper finished
+//		checkDriverStatus(motors[4]); 
+
 }
 
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
