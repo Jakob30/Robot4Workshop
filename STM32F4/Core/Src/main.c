@@ -22,6 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor/motor_init.h"
+#include "motor/kinematics_solver.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -199,14 +201,32 @@ int main(void)
 //
 //  HAL_Delay(2000);
 //  moveDegrees(90, &motor2);
-//  moveDegrees(90, &motor4);
+//  moveDegrees(20, &motor1);
+//  moveDegrees(20, &motor3);
+
 
   goHome();
-  grip();
-//  gripper_direction_t gripper_direction = VERTICAL_DOWN;
+  if (move_to_Coordinate(195, -50, 270, -90.0) == 0)
+  	return 0;
+  if (move_to_Coordinate(195, -50, 180.0, -90.0) == 0)
+    return 0;
 
-//  moveToCoordinates(10.0, 10.0, 10.0, gripper_direction);
-//  HAL_Delay(10000);
+	grip();
+
+  if (move_to_Coordinate(165, 55, 270, -90.0) == 0)
+  	return 0;
+  if (move_to_Coordinate(165, 55, 120.0, -90.0) == 0)
+    return 0;
+
+  moveDegrees(3000, &motor5);
+  while (motor5.active_movement_flag){}
+
+  moveDegrees(20, &motor2);
+  while (motor2.active_movement_flag){}
+
+  if (move_to_Coordinate(250, 0, 230.0, 20.0) == 0)
+      return 0;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
