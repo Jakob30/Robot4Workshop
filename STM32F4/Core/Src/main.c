@@ -206,7 +206,11 @@ int main(void)
 
 
   goHome();
-  if (move_to_Coordinate(195, -50, 270, -90.0) == 0)
+  float x = 195.0;
+  float y = -50.0;
+  float z = 270.0;
+  float end_effector_angle = -90.0;
+  if (move_to_Coordinate(x, y, z, end_effector_angle) == 0)
   	return 0;
   if (move_to_Coordinate(195, -50, 180.0, -90.0) == 0)
     return 0;
@@ -218,13 +222,16 @@ int main(void)
   if (move_to_Coordinate(165, 55, 120.0, -90.0) == 0)
     return 0;
 
-  moveDegrees(3000, &motor5);
+  moveDegrees(3000, &motor5); // open Gripper
   while (motor5.active_movement_flag){}
 
-  moveDegrees(20, &motor2);
+  moveDegrees(20, &motor2); //move Motor 2 up
   while (motor2.active_movement_flag){}
 
   if (move_to_Coordinate(250, 0, 230.0, 20.0) == 0)
+      return 0;
+
+  if (move_to_Coordinate(550, 0, 230.0, 20.0) == 0)
       return 0;
 
   /* USER CODE END 2 */

@@ -238,6 +238,7 @@ uint8_t move_to_Coordinate(float xtcp, float ytcp, float ztcp, float end_effecto
     if(mp.dq1_deg.valid && mp.dq2_dq3_dq4_deg.valid)
     {
     		writeDisplay("Motion possible!\n");
+    		HAL_GPIO_WritePin(LED_green_GPIO_Port, LED_green_Pin, GPIO_PIN_SET);
 
         moveDegrees(mp.dq2_dq3_dq4_deg.dq3_deg, motors[3]); 	//move motor 4 first in order not to collide with object, which will be grasped.
         HAL_Delay(1000);																		// Just a temporary solution. No need to delay if path planning is implemented.
@@ -264,10 +265,12 @@ uint8_t move_to_Coordinate(float xtcp, float ytcp, float ztcp, float end_effecto
         q3_curr_g = q3_curr_g + mp.dq2_dq3_dq4_deg.dq2_deg;
         q4_curr_g = q4_curr_g + mp.dq2_dq3_dq4_deg.dq3_deg;
 
+    		HAL_GPIO_WritePin(LED_green_GPIO_Port, LED_green_Pin, GPIO_PIN_RESET);
         return 1;
     }
     else{
   		writeDisplay("Target unreachable! Choose new one"); //Inverse kinematics failed
+  		HAL_GPIO_WritePin(LED_red_GPIO_Port, LED_red_Pin, GPIO_PIN_SET);
   		return 0;
     }
 }
