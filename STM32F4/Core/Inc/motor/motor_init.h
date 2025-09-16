@@ -8,8 +8,7 @@
 #ifndef INC_MOTOR_INIT_H_
 #define INC_MOTOR_INIT_H_
 
-#include "motor_defines.h"
-#include "motor_control.h"
+#include "motor_types.h"
 
 void init_motor_1(motor_t* motor, tmc2209_stepper_driver_t* driver);
 void init_motor_2(motor_t* motor, tmc2209_stepper_driver_t* driver);

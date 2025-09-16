@@ -6,6 +6,8 @@
  */
 
 #include "motor/motor_init.h"
+#include "motor/motor_defines.h"
+#include "main.h"
 
 //status check timer
 extern TIM_HandleTypeDef htim1;
@@ -55,6 +57,9 @@ void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
 	motor1->uart = huart1;
 
 	motor1->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_1;
+	motor1->motion.HIGH_LIMIT = HIGH_LIMIT_M_1;
+	motor1->motion.LOW_LIMIT = LOW_LIMIT_M_1;
+
 	motor1->stallguard.MAX_CONSECUTIVE_LOW = LOW_COUNTER_THRESHOLD_M_1;
 	motor1->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_1;
 	motor1->stallguard.STALL_BUFFER = STALL_BUFFER_M_1;
@@ -109,6 +114,9 @@ void init_motor_2(motor_t *motor2, tmc2209_stepper_driver_t *driver2)
 	motor2->uart = huart6;
 
 	motor2->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_2;
+	motor2->motion.HIGH_LIMIT = HIGH_LIMIT_M_2;
+	motor2->motion.LOW_LIMIT = LOW_LIMIT_M_2;
+
 	motor2->stallguard.MAX_CONSECUTIVE_LOW = LOW_COUNTER_THRESHOLD_M_2;
 	motor2->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_2;
 	motor2->stallguard.STALL_BUFFER = STALL_BUFFER_M_2;
@@ -153,6 +161,9 @@ void init_motor_3(motor_t *motor3, tmc2209_stepper_driver_t *driver3)
 	motor3->uart = huart3;
 
 	motor3->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_3;
+	motor3->motion.HIGH_LIMIT = HIGH_LIMIT_M_3;
+	motor3->motion.LOW_LIMIT = LOW_LIMIT_M_3;
+
 	motor3->stallguard.MAX_CONSECUTIVE_LOW = LOW_COUNTER_THRESHOLD_M_3;
 	motor3->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_3;
 	motor3->stallguard.STALL_BUFFER = STALL_BUFFER_M_3;
@@ -196,6 +207,9 @@ void init_motor_4(motor_t *motor4, tmc2209_stepper_driver_t *driver4)
 	motor4->uart = huart4;
 
 	motor4->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_4;
+	motor4->motion.HIGH_LIMIT = HIGH_LIMIT_M_4;
+	motor4->motion.LOW_LIMIT = LOW_LIMIT_M_4;
+
 	motor4->stallguard.MAX_CONSECUTIVE_LOW = LOW_COUNTER_THRESHOLD_M_4;
 	motor4->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_4;
 	motor4->stallguard.STALL_BUFFER = STALL_BUFFER_M_4;
@@ -262,6 +276,7 @@ void initializeDefaults(motor_t * motor)
 	motor->motion.dec_steps = 0;
 	motor->motion.step = 0;
 	motor->motion.cycle = 0;
+	motor->motion.inverse_motor_direction = 0;
 
 	motor->active_movement_flag = 0;
 

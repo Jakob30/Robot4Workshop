@@ -1,0 +1,2 @@
+../Core/Src/UI.c:18:9:crc8_xor	24	static
+../Core/Src/UI.c:27:6:HAL_UART_RxCpltCallback	16	static

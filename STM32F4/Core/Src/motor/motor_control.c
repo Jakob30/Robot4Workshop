@@ -4,62 +4,66 @@
  *      Author: jakob
  */
 #include "motor/motor_control.h"
+#include "motor/status_check.h"
+#include "math.h"
+#include "display/helper.h"
 #include "motor/motor_init.h"
+#include "motor/helper.h"
+#include "motor/kinematics.h"
 
 //Globals
 extern motor_t *motors[]; //To gain access to motor variables in interrupt service routine
-extern TIM_HandleTypeDef htim9;
-
 
 #define NUMBER_OF_MOTOR 5
-#define ALPHA 0.25f
+#define NUMBER_JOINTS 4
 
-//Point to Point Globals
-#define LENGTH_SEGMENT_1 210
-#define LENGTH_SEGMENT_2 160
-#define LENGTH_SEGMENT_3 160
-#define LENGTH_SEGMENT_4 112
-
-//uint16_t stallguard_result_g;
-//float smoothed_result_g;
-//float v_g;
-//float dynamic_threshold_g;
-//
-//uint16_t negative_diff_counter_g;
-//int consecutive_low_counter_g;
 
 
 /*
  * Function Declaration
  */
-int32_t toSteps(float degrees, motor_t* motor);
+
+
+void initMovementVars(motor_t * motor, motion_mode_t motion_mode);
+motor_error_t startMovement(motor_t * motor);
+void stopMotorMovement(motor_t * motor);
+
+static inline void trapezMove(motion_t * mt);
+
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
-void toPolar(float x, float y, float * theta_p, float * r_p);
-void initMovementVars(motor_t * motor, motion_mode_t motion_mode);
-void startMovement(motor_t * motor);
-void startStatusChecks(motor_t * motor);
-void checkOverheating(tmc2209_status_t status);
-void checkStall(uint16_t stallguard_result, motor_t* motor);
-void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
-void moveDegrees(float degrees, motor_t* motor);
-void openGripper();
-void grip();
-void goHome();
-void checkDriverStatus(motor_t* motor);
-//void initializeDefaults(motor_t * motor);
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
-/*
- * Calculates the steps needed to rotate the amount stated in the variable degrees.
- */
-int32_t toSteps(float degrees, motor_t* motor)
+motor_error_t moveGripper(gripper_close_open_t direction);
+
+void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
+
+void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
 {
-	int32_t steps;
-	steps = ((200.0 * (float)(motor->microsteps)/360.0)*degrees) * motor->gear_ratio;
-	return steps;
+	motor->motion.v = 0;
+	motor->motion.step = 0;
+	motor->motion.cycle = 0;
+	motor->motion.motion_mode = motion_mode;
 }
 
-static inline void stopMotorMovement(motor_t * motor)
+motor_error_t startMovement(motor_t * motor)
+{
+	HAL_StatusTypeDef status;
+	motor_error_t error = NO_ERROR;
+
+	HAL_GPIO_WritePin(motor->gpio_ports.step, motor->gpio_pins.step, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COMPARE(&motor->motion.motor_control_timer, TIM_CHANNEL_1, 1);
+	status = HAL_TIM_OC_Start_IT(&motor->motion.motor_control_timer, TIM_CHANNEL_1);
+
+	if (status != HAL_OK)
+		error = MOTOR_ERROR;
+
+	motor->active_movement_flag = 1;
+
+	return error;
+}
+
+void stopMotorMovement(motor_t * motor)
 {
 	HAL_TIM_OC_Stop_IT(&motor->motion.motor_control_timer, TIM_CHANNEL_1);
 	motor->active_movement_flag = 0;
@@ -172,7 +176,11 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 			break;
 		}
 		mt->step++;
-		mt->position++;
+		if (mt->inverse_motor_direction)
+			mt->position--;
+		else
+			mt->position++;
+
 	}
 
 	mt->cycle++;
@@ -189,7 +197,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	 *	-> delay in ticks = 1/(2*v)/0.0000005 = 2000000/(2*v)
 	 */
 
-	int32_t delay = 2000000 / (2 * motor->motion.v);
+	int32_t delay = 2000000 / (2 * mt->v);
 	//Add delay to current compare value in register
 	int32_t total_delay = __HAL_TIM_GET_COMPARE(&mt->motor_control_timer, TIM_CHANNEL_1) + delay;
 	__HAL_TIM_SET_COMPARE(&mt->motor_control_timer, TIM_CHANNEL_1, total_delay);
@@ -223,10 +231,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-void moveAbsolute(float degrees, motor_t* motor)
+motor_error_t moveAbsolute(float degrees, motor_t* motor)
 {
-	if (degrees < 0)
-		return;
+	motor_error_t error = NO_ERROR;
+	if (motor->active_movement_flag)
+	{
+		error = MOTOR_MOVING_ERROR;
+		return error;
+	}
+	if (degrees <= 0)
+	{
+		error = MOTOR_ERROR;
+		return error;
+	}
 
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
@@ -235,11 +252,13 @@ void moveAbsolute(float degrees, motor_t* motor)
 
 	if (actualSteps > motor->motion.position)
 	{
+		motor->motion.inverse_motor_direction = 0;
 		enable_inverse_motor_direction(motor->driver);
 		motor->motion.total_steps = actualSteps - motor->motion.position;
 	}
 	else
 	{
+		motor->motion.inverse_motor_direction = 1;
 		disable_inverse_motor_direction(motor->driver);
 		motor->motion.total_steps = motor->motion.position - actualSteps;
 	}
@@ -260,9 +279,11 @@ void moveAbsolute(float degrees, motor_t* motor)
 	}
 
 	//Start timer in output compare with interrupt
-	startMovement(motor);
+	error = startMovement(motor);
 
-	startStatusChecks(motor);
+	error = startStatusChecks(motor);
+
+	return error;
 }
 
 /*
@@ -273,8 +294,19 @@ void moveAbsolute(float degrees, motor_t* motor)
  *   - adjusting to triangle profile if total steps are too short
  *   - starting the timer for output compare with interrupt
  */
-void moveDegrees(float degrees, motor_t* motor)
+motor_error_t moveDegrees(float degrees, motor_t* motor)
 {
+	motor_error_t error = NO_ERROR;
+	if (motors[0]->active_movement_flag ||
+			motors[1]->active_movement_flag ||
+			motors[2]->active_movement_flag ||
+			motors[3]->active_movement_flag ||
+			motors[4]->active_movement_flag)
+	{
+		error = MOTOR_MOVING_ERROR;
+		return error;
+	}
+
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
 
@@ -282,11 +314,20 @@ void moveDegrees(float degrees, motor_t* motor)
 	    return;
 	else if (degrees < 0)
 	{
-	    enable_inverse_motor_direction(motor->driver);
-	    degrees = degrees * (-1);
+		enable_inverse_motor_direction(motor->driver);
+		motor->motion.inverse_motor_direction = 0;
+		degrees = degrees * (-1);
+	}
+	else if (degrees > 0)
+	{
+		disable_inverse_motor_direction(motor->driver);
+		motor->motion.inverse_motor_direction = 1;
 	}
 	else
-	    disable_inverse_motor_direction(motor->driver);
+	{
+		error = MOTOR_ERROR;
+		return error;
+	}
 
 	motor->motion.total_steps = toSteps(degrees, motor); //Convert degrees to steps
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
@@ -312,97 +353,94 @@ void moveDegrees(float degrees, motor_t* motor)
 	}
 
 	//Start timer in output compare with interrupt
-	startMovement(motor);
+	error = startMovement(motor);
 
-	startStatusChecks(motor);
+	error = startStatusChecks(motor);
+
+	return error;
 }
 
-void toPolar(float x, float y, float * theta_p, float * r_p)
+motor_error_t movePolar(float theta, float r, float z, float gripper_direction)
 {
-	if (x < 0 && y > 0)
-		*theta_p = atan(y/x);
-	else if (x > 0 && y > 0)
-		*theta_p = atan (x/y) + 90;
-	else if (x > 0 && y > 0)
-		*theta_p = atan (y/x) + 180;
-	else if (x > 0 && y > 0)
-		*theta_p = atan (x/y) + 270;
+	float phi[4] = {0, 0, 0, 0};
+	motor_error_t error;
 
-	*r_p = sqrtf(x*x + y*y);
+	error = calculateAngles(phi, theta, r, z, gripper_direction);
+
+	error = moveAbsolute(phi[0], motors[0]);
+	error = moveAbsolute(phi[1], motors[1]);
+	error = moveAbsolute(phi[2], motors[2]);
+	error = moveAbsolute(phi[3], motors[3]);
+	return error;
 }
 
-void movePolar(float theta, float r, float z, gripper_direction_t gripper_direction)
-{
-	uint32_t length_segment_3_adjusted;
-	switch(gripper_direction)
-	{
-	case VERTICAL_UP:
-		z += LENGTH_SEGMENT_4;
-		length_segment_3_adjusted = LENGTH_SEGMENT_3;
-		break;
-	case HORIZONTAL:
-		r += LENGTH_SEGMENT_4;
-		length_segment_3_adjusted = LENGTH_SEGMENT_3 + LENGTH_SEGMENT_4;
-		break;
-	case VERTICAL_DOWN:
-		z -= LENGTH_SEGMENT_4;
-		length_segment_3_adjusted = LENGTH_SEGMENT_3;
-		break;
-	}
-	float phi1, phi2, phi3, phi4;
-	phi1 = theta;
 
-	phi3 = acos(((r*r) - LENGTH_SEGMENT_1 + LENGTH_SEGMENT_2 - (z*z)) / (2 * LENGTH_SEGMENT_1 * LENGTH_SEGMENT_2));
-	float d = sqrtf(r*r + abs(z-LENGTH_SEGMENT_1) * abs(z-LENGTH_SEGMENT_1));
-
-	float gamma = acos(d / sqrtf((r*r) + (z*z)));
-	float beta = atan(length_segment_3_adjusted * sin(phi3) / (LENGTH_SEGMENT_2 + cos(phi3)*length_segment_3_adjusted));
-
-	if (z >= LENGTH_SEGMENT_1)
-		phi2 = 90 - gamma - beta;
-	else
-		phi2 = 90 + gamma -beta;
-
-	switch(gripper_direction)
-	{
-	case VERTICAL_UP:
-		phi4 = 180 - phi3 - phi2;
-	case HORIZONTAL:
-		phi4 = 0;
-	case VERTICAL_DOWN:
-		phi4 = 270 - phi3 - phi2;
-	}
-
-	moveAbsolute(phi1, motors[0]);
-	moveAbsolute(phi2, motors[1]);
-	moveAbsolute(phi3, motors[2]);
-	moveAbsolute(phi4, motors[3]);
-}
-
-void moveToCoordinates(float x, float y, float z, gripper_direction_t gripper_direction)
+motor_error_t moveToCoordinates(float x, float y, float z, float gripper_direction)
 {
 	float theta;
 	float r;
 
+	motor_error_t error;
 	toPolar(x, y, &theta, &r);
-	movePolar(theta, r, z, gripper_direction);
+	error = movePolar(theta, r, z, gripper_direction);
+	if (error == NO_ERROR)
+	{
+		char movingMsg[64];
+		snprintf(movingMsg, sizeof(movingMsg), "moving to %d x  %d y %d z", (int)x, (int)y, (int)z);
+		writeDisplay(movingMsg);
+	}
+ 	while(motors[0] -> active_movement_flag ||
+						motors[1] -> active_movement_flag ||
+						motors[2] -> active_movement_flag ||
+						motors[3] -> active_movement_flag )
+  	{
+  		checkDriverStatus(motors[0]);
+  		checkDriverStatus(motors[1]);
+  		checkDriverStatus(motors[2]);
+  		checkDriverStatus(motors[3]);
+  	}
+	return error;
 }
 
-void openGripper()
+motor_error_t openGripper()
 {
+	motor_error_t error = NO_ERROR;
+	error = moveGripper(OPEN);
+	return error;
+}
+
+motor_error_t grip()
+{
+	motor_error_t error = NO_ERROR;
+	error = moveGripper(CLOSE);
+	return error;
+}
+
+motor_error_t moveGripper(gripper_close_open_t direction)
+{
+	motor_error_t error = NO_ERROR;
 	motor_t * motor5 = motors[4];
 	if (motor5->active_movement_flag)
-		return;
+	{
+		error = MOTOR_MOVING_ERROR;
+		return error;
+	}
 
-	disable_inverse_motor_direction(motor5->driver);
-	moveDegrees(12240, motor5);
-}
-
-void grip()
-{
-	motor_t * motor5 = motors[4];
-
-	enable_inverse_motor_direction(motor5->driver);
+	if (direction == CLOSE)
+	{
+		enable_inverse_motor_direction(motor5->driver);
+		motor5->motion.inverse_motor_direction = 0;
+	}
+	else if (direction == OPEN)
+	{
+		disable_inverse_motor_direction(motor5->driver);
+		motor5->motion.inverse_motor_direction = 1;
+	}
+	else
+	{
+		error = MOTOR_ERROR;
+		return error;
+	}
 
 	if (HAL_GPIO_ReadPin(motor5->gpio_ports.mot_en, motor5->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor5->driver);
@@ -412,28 +450,35 @@ void grip()
 	motion_mode_t motion_mode = MOTION_GRIP;
 	initMovementVars(motor5, motion_mode);
 
-	startMovement(motor5);
-	startStatusChecks(motor5);
+	error = startMovement(motor5);
+	error = startStatusChecks(motor5);
 	while (motor5->stallguard.stall_flag == 0)
 	{
 		checkDriverStatus(motor5);
 	}
+	return error;
 }
 
-void goHome()
+motor_error_t goHome()
 {
-	uint8_t opened_gripper_flag = 0;
+	motor_error_t error = NO_ERROR;
+
+	if (motors[0]->active_movement_flag ||
+			motors[1]->active_movement_flag ||
+			motors[2]->active_movement_flag ||
+			motors[3]->active_movement_flag)
+	{
+		error = MOTOR_MOVING_ERROR;
+		return error;
+	};
 
 	writeDisplay("Homing...");
+
 	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
 		motor_t * motor = motors[i];
 //		if (i == 3)
 //			continue;
-		if (i == 4)
-		{
-			enable_inverse_motor_direction(motor->driver);
-		}
 
 		motion_mode_t motion_mode = MOTION_HOME;
 
@@ -444,8 +489,8 @@ void goHome()
 
 		initMovementVars(motor, motion_mode);
 
-		startMovement(motor);
-		startStatusChecks(motor);
+		error = startMovement(motor);
+		error = startStatusChecks(motor);
 	}
 
 	while(motors[0]->stallguard.stall_flag == 0
@@ -456,11 +501,6 @@ void goHome()
 			|| opened_gripper_flag == 0) //If there is no flag and motors[4]->stallguard.stall_flag == 1 (and every other motors already stalled),
 										// while loop breaks -> so openGripper() isn't called. It make sure even if motor 5 is the last one stalled, openGripper() always called.
 	{
-		if (motors[4]->stallguard.stall_flag == 1 && opened_gripper_flag == 0) //After homing, gripper is closed. Flag = 1 if openGripper() is called
-		{
-			opened_gripper_flag = 1;
-			openGripper();
-		}
 		checkDriverStatus(motors[0]);
 		checkDriverStatus(motors[1]);
 		checkDriverStatus(motors[2]);
@@ -482,124 +522,9 @@ void goHome()
 	motors[3]->motion.position = 0;
 	motors[4]->motion.position = 0;
 
-	while (motors[4] -> active_movement_flag){} //wait until openGripper finished
-//		checkDriverStatus(motors[4]); 
+	writeDisplay("Homing finished");
 
-}
-
-void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
-{
-	motor->motion.v = 0;
-	motor->motion.step = 0;
-	motor->motion.cycle = 0;
-	motor->motion.motion_mode = motion_mode;
-}
-
-void startMovement(motor_t * motor)
-{
-	HAL_GPIO_WritePin(motor->gpio_ports.step, motor->gpio_pins.step, GPIO_PIN_RESET);
-	__HAL_TIM_SET_COMPARE(&motor->motion.motor_control_timer, TIM_CHANNEL_1, 1);
-	HAL_TIM_OC_Start_IT(&motor->motion.motor_control_timer, TIM_CHANNEL_1);
-
-	motor->active_movement_flag = 1;
-}
-
-void startStatusChecks(motor_t * motor)
-{
-	HAL_TIM_Base_Start_IT(&motor->status_check_timer);  //Timer for periodical status checks
-
-	motor->status_flag = 0;
-	motor->stallguard.previous_smoothed_result = 0;
-
-//	while(motor->active_movement_flag)		//While motor is moving, periodically check driver status
-//	{
-//		checkDriverStatus(motor);
-//	}
-}
-
-/*
- * Work in progress, simple prototype function.
- */
-void checkOverheating(tmc2209_status_t status)
-{
-	if (status.over_temperature_157c || status.over_temperature_150c || status.over_temperature_143c)
-	{
-		writeDisplay("Critical Overheating!");
-	}
-	else if (status.over_temperature_120c)
-	{
-		writeDisplay("Warning, temperature above 120c");
-	}
-}
-
-/*
- * Also work in progress, now simply outputs stallguard result to monitor.
- */
-void checkStall(uint16_t stallguard_result, motor_t* motor)
-{
-	stallguard_t* sg = &motor->stallguard;
-	uint16_t result = stallguard_result;
-//	float diff;
-
-	sg->smoothed_result = ALPHA * stallguard_result + (1-ALPHA) * sg->previous_smoothed_result; //Exponential smoothing/exponential moving average (EMA) filter
-
-//	smoothed_result_g = sg->smoothed_result;
-//	stallguard_result_g = stallguard_result;
-//	v_g = motor->motion.v;
-
-//	diff = sg->smoothed_result - sg->previous_smoothed_result;
-	float k = sg->MAX_STALLGUARD_VALUE / (float) motor->motion.V_MAX;
-
-	if (motor->ID == '5')
-	{
-		result = sg->smoothed_result;	//Since the stall values from Motor 5 so noisy, they need to be smoothed
-		if (motor->motion.motion_mode == MOTION_GRIP)
-			sg->STALL_BUFFER = STALL_GRIP_BUFFER_M_5;		//Bigger Buffer for gripping than normal motion, as Motor has to grasp the object stronger to hold/pick it up
-	}
-
-	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
-//	dynamic_threshold_g = dynamic_stall_threshold;
-
-
-	if (result < dynamic_stall_threshold)
-	{
-		sg->consecutive_low_counter++;
-		if (sg->consecutive_low_counter >= sg->MAX_CONSECUTIVE_LOW)
-		{
-			stopMotorMovement(motor);
-			sg->stall_flag = 1;
-			sg->consecutive_low_counter = 0;
-		}
-	}
-	else
-	{
-		sg->consecutive_low_counter = 0;
-	}
-
-	sg->previous_smoothed_result = sg->smoothed_result;
-
-}
-
-/*
- * This function is continuously called while a motor is active.
- * It only does something when status_flag has been set to 1.
- * Then it calls the checkOverheat and Load functions.
- */
-void checkDriverStatus(motor_t* motor)
-{
-	if (motor->status_flag)
-	{
-//		tmc2209_status_t status;
-		uint16_t stallguard_result;
-
-		motor->status_flag = 0;
-//		status = get_status(motor->driver);
-//
-//		checkOverheating(status);
-
-		stallguard_result = get_stall_guard_result(motor->driver);
-		checkStall(stallguard_result, motor);
-	}
+	return error;
 }
 
 void toggle_inverse_motor_direction(tmc2209_stepper_driver_t *stepper_driver)

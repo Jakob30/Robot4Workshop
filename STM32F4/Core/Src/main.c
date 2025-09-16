@@ -22,6 +22,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor/motor_init.h"
+#include "motor/motor_types.h"
+#include "motor/motor_control.h"
+#include "motor/status_check.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +35,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define MOTOR_COUNT 5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -202,18 +206,40 @@ int main(void)
 //  moveDegrees(90, &motor4);
 
   goHome();
-  grip();
-//  gripper_direction_t gripper_direction = VERTICAL_DOWN;
 
-//  moveToCoordinates(10.0, 10.0, 10.0, gripper_direction);
-//  HAL_Delay(10000);
+  moveToCoordinates(195.0, -50.0, 295.0, 90.0);
+  moveToCoordinates(195.0, -50.0, 205.0, 90.0);
+
+  grip();
+
+//  moveToCoordinates(195.0, -50.0, 295.0, 90);
+//  moveToCoordinates(165.0, 55.0, 295.0, 90);
+//  moveToCoordinates(165.0, 55.0, 145.0, 90);
+//
+//  moveDegrees(3000, &motor5);
+//
+//  while(motor5.active_movement_flag)
+//  {
+//	  checkDriverStatus(&motor5);
+//  }
+
+//
+//  moveDegrees(20, &motor2);
+//
+//  while(motor2.active_movement_flag)
+//  {
+//	  checkDriverStatus(&motor2);
+//  }
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  HAL_Delay(2000);
+//	  checkAllDrivers();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

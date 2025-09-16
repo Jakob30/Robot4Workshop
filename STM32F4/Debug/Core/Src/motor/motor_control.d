@@ -1,6 +1,6 @@
 Core/Src/motor/motor_control.o: ../Core/Src/motor/motor_control.c \
- ../Core/Inc/motor/motor_control.h ../Core/Inc/display/helper.h \
- ../Core/Inc/display/ssd1306.h ../Core/Inc/display/ssd1306_conf.h \
+ ../Core/Inc/motor/motor_control.h ../Core/Inc/motor/motor_types.h \
+ ../Core/Inc/tmc2209.h ../Core/Inc/tmc2209_defines.h ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  ../Core/Inc/stm32f4xx_hal_conf.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
@@ -31,14 +31,16 @@ Core/Src/motor/motor_control.o: ../Core/Src/motor/motor_control.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/display/ssd1306_fonts.h ../Core/Inc/tmc2209.h \
- ../Core/Inc/tmc2209_defines.h ../Core/Inc/main.h ../Core/Inc/main.h \
- ../Core/Inc/motor/motor_init.h ../Core/Inc/motor/motor_defines.h \
- ../Core/Inc/motor/motor_control.h
+ ../Core/Inc/main.h ../Core/Inc/motor/status_check.h \
+ ../Core/Inc/display/helper.h ../Core/Inc/display/ssd1306.h \
+ ../Core/Inc/display/ssd1306_conf.h ../Core/Inc/display/ssd1306_fonts.h \
+ ../Core/Inc/motor/motor_init.h ../Core/Inc/motor/helper.h \
+ ../Core/Inc/motor/motor_types.h ../Core/Inc/motor/kinematics.h
 ../Core/Inc/motor/motor_control.h:
-../Core/Inc/display/helper.h:
-../Core/Inc/display/ssd1306.h:
-../Core/Inc/display/ssd1306_conf.h:
+../Core/Inc/motor/motor_types.h:
+../Core/Inc/tmc2209.h:
+../Core/Inc/tmc2209_defines.h:
+../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
@@ -69,11 +71,13 @@ Core/Src/motor/motor_control.o: ../Core/Src/motor/motor_control.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
+../Core/Inc/main.h:
+../Core/Inc/motor/status_check.h:
+../Core/Inc/display/helper.h:
+../Core/Inc/display/ssd1306.h:
+../Core/Inc/display/ssd1306_conf.h:
 ../Core/Inc/display/ssd1306_fonts.h:
-../Core/Inc/tmc2209.h:
-../Core/Inc/tmc2209_defines.h:
-../Core/Inc/main.h:
-../Core/Inc/main.h:
 ../Core/Inc/motor/motor_init.h:
-../Core/Inc/motor/motor_defines.h:
-../Core/Inc/motor/motor_control.h:
+../Core/Inc/motor/helper.h:
+../Core/Inc/motor/motor_types.h:
+../Core/Inc/motor/kinematics.h:
