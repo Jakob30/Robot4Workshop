@@ -17,8 +17,6 @@ extern motor_t *motors[]; //To gain access to motor variables in interrupt servi
 #define NUMBER_OF_MOTOR 5
 #define NUMBER_JOINTS 4
 
-
-
 /*
  * Function Declaration
  */
@@ -44,6 +42,7 @@ void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
 	motor->motion.step = 0;
 	motor->motion.cycle = 0;
 	motor->motion.motion_mode = motion_mode;
+	motor->stallguard.stall_flag = 0;
 }
 
 motor_error_t startMovement(motor_t * motor)
@@ -172,7 +171,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 				mt->v = sqrtf(2 * mt->ACC_MAX * (mt->step + 1));
 			else
 				mt->v = mt->V_MAX;
-
 			break;
 		}
 		mt->step++;
@@ -223,13 +221,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //	writeDisplay("HAHA");
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	if (GPIO_Pin == B1_Pin)  // Check if User Button
-	{
-		toggle_inverse_motor_direction(motors[4]->driver);
-	}
-}
 
 motor_error_t moveAbsolute(float degrees, motor_t* motor)
 {
@@ -297,11 +288,7 @@ motor_error_t moveAbsolute(float degrees, motor_t* motor)
 motor_error_t moveDegrees(float degrees, motor_t* motor)
 {
 	motor_error_t error = NO_ERROR;
-	if (motors[0]->active_movement_flag ||
-			motors[1]->active_movement_flag ||
-			motors[2]->active_movement_flag ||
-			motors[3]->active_movement_flag ||
-			motors[4]->active_movement_flag)
+	if (motor->active_movement_flag)
 	{
 		error = MOTOR_MOVING_ERROR;
 		return error;
@@ -311,23 +298,22 @@ motor_error_t moveDegrees(float degrees, motor_t* motor)
 		tmc2209_enable(motor->driver);
 
 	if (fabs(degrees) < 1e-5)
-	    return;
-	else if (degrees < 0)
+	{
+		error = MOTOR_ERROR;
+	    return error;
+	}
+	else if (degrees < 1e-5)
 	{
 		enable_inverse_motor_direction(motor->driver);
 		motor->motion.inverse_motor_direction = 0;
 		degrees = degrees * (-1);
 	}
-	else if (degrees > 0)
+	else if (degrees > 1e-5)
 	{
 		disable_inverse_motor_direction(motor->driver);
 		motor->motion.inverse_motor_direction = 1;
 	}
-	else
-	{
-		error = MOTOR_ERROR;
-		return error;
-	}
+
 
 	motor->motion.total_steps = toSteps(degrees, motor); //Convert degrees to steps
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
@@ -366,6 +352,7 @@ motor_error_t movePolar(float theta, float r, float z, float gripper_direction)
 	motor_error_t error;
 
 	error = calculateAngles(phi, theta, r, z, gripper_direction);
+
 
 	error = moveAbsolute(phi[0], motors[0]);
 	error = moveAbsolute(phi[1], motors[1]);
@@ -452,7 +439,7 @@ motor_error_t moveGripper(gripper_close_open_t direction)
 
 	error = startMovement(motor5);
 	error = startStatusChecks(motor5);
-	while (motor5->stallguard.stall_flag == 0)
+	while (motor5->active_movement_flag)
 	{
 		checkDriverStatus(motor5);
 	}
@@ -497,15 +484,10 @@ motor_error_t goHome()
 			|| motors[1]->stallguard.stall_flag == 0
 			|| motors[2]->stallguard.stall_flag == 0
 			|| motors[3]->stallguard.stall_flag == 0
-			|| motors[4]->stallguard.stall_flag == 0
-			|| opened_gripper_flag == 0) //If there is no flag and motors[4]->stallguard.stall_flag == 1 (and every other motors already stalled),
+			|| motors[4]->stallguard.stall_flag == 0) //If there is no flag and motors[4]->stallguard.stall_flag == 1 (and every other motors already stalled),
 										// while loop breaks -> so openGripper() isn't called. It make sure even if motor 5 is the last one stalled, openGripper() always called.
 	{
-		checkDriverStatus(motors[0]);
-		checkDriverStatus(motors[1]);
-		checkDriverStatus(motors[2]);
-		checkDriverStatus(motors[3]);
-		checkDriverStatus(motors[4]);
+		checkAllDrivers();
 	}
 
 	writeDisplay("Homing finished");

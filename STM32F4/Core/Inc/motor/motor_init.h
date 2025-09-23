@@ -10,12 +10,14 @@
 
 #include "motor_types.h"
 
-void init_motor_1(motor_t* motor, tmc2209_stepper_driver_t* driver);
-void init_motor_2(motor_t* motor, tmc2209_stepper_driver_t* driver);
-void init_motor_3(motor_t* motor, tmc2209_stepper_driver_t* driver);
-void init_motor_4(motor_t* motor, tmc2209_stepper_driver_t* driver);
-void init_motor_5(motor_t* motor, tmc2209_stepper_driver_t* driver);
+typedef enum
+{
+	MODE_2_UART,
+	MODE_5_UART
+}uart_mode_t;
+
 void initializeDefaults(motor_t * motor);
+void initAllMotors(uart_mode_t UART_MODE);
 
 
 #endif /* INC_MOTOR_INIT_H_ */

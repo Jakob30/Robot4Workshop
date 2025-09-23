@@ -66,7 +66,7 @@ UART_HandleTypeDef huart6;
 
 /* USER CODE BEGIN PV */
 motor_t *motors[MOTOR_COUNT];
-
+uint8_t start_flag;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -107,6 +107,28 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+	motor_t motor1;
+	motor_t motor2;
+	motor_t motor3;
+	motor_t motor4;
+	motor_t motor5;
+	motors[0] = &motor1;
+	motors[1] = &motor2;
+	motors[2] = &motor3;
+	motors[3] = &motor4;
+	motors[4] = &motor5;
+
+	tmc2209_stepper_driver_t driver1;
+	tmc2209_stepper_driver_t driver2;
+	tmc2209_stepper_driver_t driver3;
+	tmc2209_stepper_driver_t driver4;
+	tmc2209_stepper_driver_t driver5;
+
+	motors[0]->driver = &driver1;
+	motors[1]->driver = &driver2;
+	motors[2]->driver = &driver3;
+	motors[3]->driver = &driver4;
+	motors[4]->driver = &driver5;
 
   /* USER CODE END 1 */
 
@@ -116,23 +138,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  tmc2209_stepper_driver_t driver1;
-  tmc2209_stepper_driver_t driver2;
-  tmc2209_stepper_driver_t driver3;
-  tmc2209_stepper_driver_t driver4;
-  tmc2209_stepper_driver_t driver5;
 
-  motor_t motor1;
-  motor_t motor2;
-  motor_t motor3;
-  motor_t motor4;
-  motor_t motor5;
-
-  motors[0] = &motor1;
-  motors[1] = &motor2;
-  motors[2] = &motor3;
-  motors[3] = &motor4;
-  motors[4] = &motor5;
 
   /* USER CODE END Init */
 
@@ -163,11 +169,12 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
-  init_motor_1(&motor1, &driver1);
-  init_motor_2(&motor2, &driver2);
-  init_motor_3(&motor3, &driver3);
-  init_motor_4(&motor4, &driver4);
-  init_motor_5(&motor5, &driver5);
+  initAllMotors(MODE_5_UART);
+
+  while(start_flag == 0);
+  tmc2209_input_t input;
+  input.bytes = get_input(motors[0]->driver);
+
 
 //  tmc2209_enable(motor3.driver);
 //  moveDegrees(90, &motor2);
@@ -205,17 +212,7 @@ int main(void)
 //  moveDegrees(90, &motor2);
 //  moveDegrees(90, &motor4);
 
-  goHome();
 
-  moveToCoordinates(195.0, -50.0, 295.0, 90.0);
-  moveToCoordinates(195.0, -50.0, 205.0, 90.0);
-
-  grip();
-
-//  moveToCoordinates(195.0, -50.0, 295.0, 90);
-//  moveToCoordinates(165.0, 55.0, 295.0, 90);
-//  moveToCoordinates(165.0, 55.0, 145.0, 90);
-//
 //  moveDegrees(3000, &motor5);
 //
 //  while(motor5.active_movement_flag)
@@ -223,7 +220,17 @@ int main(void)
 //	  checkDriverStatus(&motor5);
 //  }
 
-//
+//  goHome();
+//  HAL_Delay(2000);
+////
+//  moveToCoordinates(190, -70, 205, 90);
+//  HAL_Delay(2000);
+////
+//  moveToCoordinates(190, -70, 145, 90);
+//  grip();
+//  moveToCoordinates(190, -70, 205, 90);
+//  HAL_Delay(2000);
+
 //  moveDegrees(20, &motor2);
 //
 //  while(motor2.active_movement_flag)
@@ -1094,6 +1101,13 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == B1_Pin)  // Check if User Button
+	{
+		start_flag = 1;
+	}
+}
 
 PUTCHAR_PROTOTYPE
 {

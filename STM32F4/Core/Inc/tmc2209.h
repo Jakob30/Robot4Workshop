@@ -686,6 +686,8 @@ void use_internal_sense_resistor(tmc2209_stepper_driver_t *stepper_driver);
  * @param stepper_driver
  * @return uint8_t
  */
+uint32_t get_input(tmc2209_stepper_driver_t *stepper_driver);
+
 uint8_t get_version(tmc2209_stepper_driver_t *stepper_driver);
 /**
  * @brief Check if the stepper driver is communicating by checking the version register and comparing it with 0x21.

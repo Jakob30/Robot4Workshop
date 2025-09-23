@@ -302,13 +302,20 @@ void use_internal_sense_resistor(tmc2209_stepper_driver_t *stepper_driver)
 }
 
 // bidirectional methods
-
 uint8_t get_version(tmc2209_stepper_driver_t *stepper_driver)
 {
   tmc2209_input_t input;
   input.bytes = tmc2209_read(stepper_driver, ADDRESS_IOIN);
 
   return input.version;
+}
+
+uint32_t get_input(tmc2209_stepper_driver_t *stepper_driver)
+{
+  tmc2209_input_t input;
+  input.bytes = tmc2209_read(stepper_driver, ADDRESS_IOIN);
+
+  return input.bytes;
 }
 
 bool is_communicating(tmc2209_stepper_driver_t *stepper_driver)

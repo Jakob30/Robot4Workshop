@@ -9,7 +9,7 @@
 #include "math.h"
 #include "display/helper.h"
 
-#define LENGTH_SEGMENT_1 210
+#define LENGTH_SEGMENT_1 223
 #define LENGTH_SEGMENT_2 160
 #define LENGTH_SEGMENT_3 160
 #define LENGTH_SEGMENT_4 112
@@ -85,7 +85,7 @@ motor_error_t calculateAngles(float phi[], float theta, float r, float z, float 
 	else
 		phi[1] = M_PI/2 + gamma -beta;
 
-	phi[3] = M_PI/2 - phi[2] + (beta - gamma) + gripper_direction;
+	phi[3] = gripper_direction - (phi[1] + phi[2]) + M_PI;
 
 	phi[0] = toGrad(phi[0]);
 	phi[1] = toGrad(phi[1]);
@@ -103,5 +103,37 @@ motor_error_t calculateAngles(float phi[], float theta, float r, float z, float 
 
 	return error;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

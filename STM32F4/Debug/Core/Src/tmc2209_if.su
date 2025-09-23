@@ -1,6 +1,5 @@
-../Core/Src/tmc2209_if.c:43:6:tmc2209_set_uart	16	static
-../Core/Src/tmc2209_if.c:48:6:tmc2209_set_hardware_enable_pin	24	static
-../Core/Src/tmc2209_if.c:56:7:tmc2209_enable	16	static
-../Core/Src/tmc2209_if.c:67:7:tmc2209_disable	16	static
-../Core/Src/tmc2209_if.c:77:7:tmc2209_write	64	static
-../Core/Src/tmc2209_if.c:97:11:tmc2209_read	96	static
+../Core/Src/tmc2209_if.c:45:6:tmc2209_set_hardware_enable_pin	24	static
+../Core/Src/tmc2209_if.c:53:7:tmc2209_enable	16	static
+../Core/Src/tmc2209_if.c:64:7:tmc2209_disable	16	static
+../Core/Src/tmc2209_if.c:74:7:tmc2209_write	64	static
+../Core/Src/tmc2209_if.c:94:11:tmc2209_read	96	static

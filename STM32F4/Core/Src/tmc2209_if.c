@@ -40,10 +40,7 @@
 // /* Private function code -----------------------------------------------------*/
 
 extern UART_HandleTypeDef huart1;
-void tmc2209_set_uart(tmc2209_stepper_driver_t *stepper_driver, UART_HandleTypeDef uart)
-{
-	stepper_driver->uart_ = uart;
-}
+
 
 void tmc2209_set_hardware_enable_pin(tmc2209_stepper_driver_t *stepper_driver, uint16_t hardware_enable_pin, GPIO_TypeDef* hardware_enable_gpio_port)
 {
@@ -79,7 +76,7 @@ void tmc2209_set_hardware_enable_pin(tmc2209_stepper_driver_t *stepper_driver, u
    write_read_reply_datagram_t write_datagram;
    write_datagram.bytes            = 0;
    write_datagram.sync             = SYNC;
-   write_datagram.serial_address   = 0;
+   write_datagram.serial_address   = stepper_driver->serial_address_;
    write_datagram.register_address = register_address;
    write_datagram.rw               = RW_WRITE;
    write_datagram.data             = reverse_data(data);
@@ -99,7 +96,7 @@ void tmc2209_set_hardware_enable_pin(tmc2209_stepper_driver_t *stepper_driver, u
    read_request_datagram_t read_request_datagram;
    read_request_datagram.bytes            = 0;
    read_request_datagram.sync             = SYNC;
-   read_request_datagram.serial_address   = 0;
+   read_request_datagram.serial_address   = stepper_driver->serial_address_;
    read_request_datagram.register_address = register_address;
    read_request_datagram.rw               = RW_READ;
    read_request_datagram.crc              = calculate_crc_read(&read_request_datagram, READ_REQUEST_DATAGRAM_SIZE);

@@ -27,4 +27,21 @@ int32_t toSteps(float degrees, motor_t* motor)
 	return steps;
 }
 
+uint16_t findMax(float arr[])
+{
+	uint16_t size = sizeof(arr)/sizeof(arr[0]);
+	uint16_t index = 0;
+	float max = arr[index];
+
+	for (int i = 0; i < size; i++)
+	{
+		if (arr[i] > max)
+		{
+			max = arr[i];
+			index = i;
+		};
+	}
+	return index;
+}
+
 

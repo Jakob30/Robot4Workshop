@@ -29,8 +29,33 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart5;
 
-void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
+extern motor_t * motors[];
+void initMotor1(uart_mode_t UART_MODE);
+void initMotor2(uart_mode_t UART_MODE);
+void initMotor3(uart_mode_t UART_MODE);
+void initMotor4(uart_mode_t UART_MODE);
+void initMotor5(uart_mode_t UART_MODE);
+
+void initAllMotors(uart_mode_t UART_MODE)
 {
+	initMotor1(UART_MODE);
+	initMotor2(UART_MODE);
+	initMotor3(UART_MODE);
+	initMotor4(UART_MODE);
+	initMotor5(UART_MODE);
+}
+
+void initMotor1(uart_mode_t UART_MODE)
+{
+	motor_t * motor1 = motors[0];
+	tmc2209_stepper_driver_t * driver1 = motor1->driver;
+
+	motor1->gpio_pins.mot_en 	= MOT_EN_1_Pin;
+	motor1->gpio_ports.mot_en 	= MOT_EN_1_GPIO_Port;
+
+	tmc2209_set_hardware_enable_pin(driver1, motor1->gpio_pins.mot_en, motor1->gpio_ports.mot_en);
+	tmc2209_disable(driver1);
+
 	initializeDefaults(motor1);
 	motor1->ID = '1';
 
@@ -45,16 +70,23 @@ void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
 
 	motor1->gpio_pins.step 		= STEP_1_Pin;
 	motor1->gpio_pins.dir 		= DIR_1_Pin;
-	motor1->gpio_pins.mot_en 	= MOT_EN_1_Pin;
 //	motor1->gpio_pins.diag 		= DIAG_1_Pin;
 	motor1->gpio_ports.step 	= STEP_1_GPIO_Port;
 	motor1->gpio_ports.dir 		= DIR_1_GPIO_Port;
-	motor1->gpio_ports.mot_en 	= MOT_EN_1_GPIO_Port;
 //	motor1->gpio_ports.diag		= DIAG_1_GPIO_Port;
 
 	motor1->motion.motor_control_timer = htim12;
 	motor1->status_check_timer = htim1;
-	motor1->uart = huart1;
+	if (UART_MODE == MODE_5_UART)
+	{
+		motor1->uart = huart1;
+		tmc2209_setup(driver1, 115200, SERIAL_ADDRESS_0);
+	}
+	else if (UART_MODE == MODE_2_UART)
+	{
+		motor1->uart = huart1;
+		tmc2209_setup(driver1, 115200, SERIAL_ADDRESS_0);
+	}
 
 	motor1->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_1;
 	motor1->motion.HIGH_LIMIT = HIGH_LIMIT_M_1;
@@ -64,17 +96,24 @@ void init_motor_1(motor_t *motor1, tmc2209_stepper_driver_t *driver1)
 	motor1->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_1;
 	motor1->stallguard.STALL_BUFFER = STALL_BUFFER_M_1;
 
-	tmc2209_set_uart(driver1, huart1);
-	tmc2209_set_hardware_enable_pin(driver1, motor1->gpio_pins.mot_en, motor1->gpio_ports.mot_en);
-	tmc2209_setup(driver1, 115200, SERIAL_ADDRESS_0);
+	driver1->uart_ = motor1->uart;
+
 	set_micro_steps_per_step(driver1, motor1->microsteps);
 	set_all_current_percent_values(driver1, motor1->current_settings.RUN_CURRENT_PERCENT, motor1->current_settings.HOLD_CURRENT_PERCENT, 0);
 
-	motor1->driver = driver1;
 }
 
-void init_motor_2(motor_t *motor2, tmc2209_stepper_driver_t *driver2)
+void initMotor2(uart_mode_t UART_MODE)
 {
+	motor_t * motor2 = motors[1];
+	tmc2209_stepper_driver_t * driver2 = motor2->driver;
+
+	motor2->gpio_pins.mot_en 	= MOT_EN_2_Pin;
+	motor2->gpio_ports.mot_en 	= MOT_EN_2_GPIO_Port;
+
+	tmc2209_set_hardware_enable_pin(driver2, motor2->gpio_pins.mot_en, motor2->gpio_ports.mot_en);
+	tmc2209_disable(driver2);
+
 	initializeDefaults(motor2);
 	motor2->ID = '2';
 
@@ -84,34 +123,30 @@ void init_motor_2(motor_t *motor2, tmc2209_stepper_driver_t *driver2)
 	motor2->motion.ACC_MAX = ACC_MAX_M_2;
 	motor2->motion.DEC_MAX = DEC_MAX_M_2;
 
-	motor2->motion.v = 0;
-	motor2->motion.total_steps = 0;
-	motor2->motion.const_steps = 0;
-	motor2->motion.acc_steps = 0;
-	motor2->motion.dec_steps = 0;
-	motor2->motion.step = 0;
-	motor2->motion.cycle = 0;
-
-	motor2->active_movement_flag = 0;
-
-	motor2->status_flag = 0;
 
 	motor2->current_settings.HOLD_CURRENT_PERCENT = HOLD_CURRENT_PERCENT_M_2;
 	motor2->current_settings.RUN_CURRENT_PERCENT = RUN_CURRENT_PERCENT_M_2;
 
 	motor2->gpio_pins.step 		= STEP_2_Pin;
 	motor2->gpio_pins.dir 		= DIR_2_Pin;
-	motor2->gpio_pins.mot_en 	= MOT_EN_2_Pin;
 //	motor2->gpio_pins.diag 		= DIAG_2_Pin;
 	motor2->gpio_ports.step 	= STEP_2_GPIO_Port;
 	motor2->gpio_ports.dir 		= DIR_2_GPIO_Port;
-	motor2->gpio_ports.mot_en 	= MOT_EN_2_GPIO_Port;
 //	motor2->gpio_ports.diag 	= DIAG_2_GPIO_Port;
 
 	motor2->motion.motor_control_timer = htim13;
 	motor2->status_check_timer = htim6;
 
-	motor2->uart = huart6;
+	if (UART_MODE == MODE_5_UART)
+	{
+		motor2->uart = huart6;
+		tmc2209_setup(driver2, 115200, SERIAL_ADDRESS_0);
+	}
+	else if (UART_MODE == MODE_2_UART)
+	{
+		motor2->uart = huart1;
+		tmc2209_setup(driver2, 115200, SERIAL_ADDRESS_1);
+	}
 
 	motor2->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_2;
 	motor2->motion.HIGH_LIMIT = HIGH_LIMIT_M_2;
@@ -121,18 +156,25 @@ void init_motor_2(motor_t *motor2, tmc2209_stepper_driver_t *driver2)
 	motor2->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_2;
 	motor2->stallguard.STALL_BUFFER = STALL_BUFFER_M_2;
 
-	tmc2209_set_uart(driver2, motor2->uart);
-	tmc2209_set_hardware_enable_pin(driver2, motor2->gpio_pins.mot_en, motor2->gpio_ports.mot_en);
-	tmc2209_setup(driver2, 115200, SERIAL_ADDRESS_0);
-//	disable_stealth_chop(motor2->driver);
+	driver2->uart_ = motor2->uart;
+
+
 	set_micro_steps_per_step(driver2, motor2->microsteps);
 	set_all_current_percent_values(driver2, motor2->current_settings.RUN_CURRENT_PERCENT, motor2->current_settings.HOLD_CURRENT_PERCENT, 0);
 
-	motor2->driver = driver2;
 }
 
-void init_motor_3(motor_t *motor3, tmc2209_stepper_driver_t *driver3)
+void initMotor3(uart_mode_t UART_MODE)
 {
+	motor_t * motor3 = motors[2];
+	tmc2209_stepper_driver_t * driver3 = motor3->driver;
+
+	motor3->gpio_pins.mot_en 	= MOT_EN_3_Pin;
+	motor3->gpio_ports.mot_en 	= MOT_EN_3_GPIO_Port;
+
+	tmc2209_set_hardware_enable_pin(driver3, motor3->gpio_pins.mot_en, motor3->gpio_ports.mot_en);
+	tmc2209_disable(driver3);
+
 	initializeDefaults(motor3);
 
 	motor3->ID = '3';
@@ -148,17 +190,24 @@ void init_motor_3(motor_t *motor3, tmc2209_stepper_driver_t *driver3)
 
 	motor3->gpio_pins.step 		= STEP_3_Pin;
 	motor3->gpio_pins.dir 		= DIR_3_Pin;
-	motor3->gpio_pins.mot_en 	= MOT_EN_3_Pin;
 	motor3->gpio_pins.diag 		= DIAG_3_Pin;
 	motor3->gpio_ports.step 	= STEP_3_GPIO_Port;
 	motor3->gpio_ports.dir 		= DIR_3_GPIO_Port;
-	motor3->gpio_ports.mot_en 	= MOT_EN_3_GPIO_Port;
 	motor3->gpio_ports.diag 	= DIAG_3_GPIO_Port;
 
 	motor3->motion.motor_control_timer = htim3;
 	motor3->status_check_timer = htim7;
 
-	motor3->uart = huart3;
+	if (UART_MODE == MODE_5_UART)
+	{
+		motor3->uart = huart3;
+		tmc2209_setup(driver3, 115200, SERIAL_ADDRESS_0);
+	}
+	else if (UART_MODE == MODE_2_UART)
+	{
+		motor3->uart = huart1;
+		tmc2209_setup(driver3, 115200, SERIAL_ADDRESS_2);
+	}
 
 	motor3->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_3;
 	motor3->motion.HIGH_LIMIT = HIGH_LIMIT_M_3;
@@ -168,17 +217,24 @@ void init_motor_3(motor_t *motor3, tmc2209_stepper_driver_t *driver3)
 	motor3->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_3;
 	motor3->stallguard.STALL_BUFFER = STALL_BUFFER_M_3;
 
-	tmc2209_set_uart(driver3, huart3);
-	tmc2209_set_hardware_enable_pin(driver3, motor3->gpio_pins.mot_en, motor3->gpio_ports.mot_en);
-	tmc2209_setup(driver3, 115200, SERIAL_ADDRESS_0);
+	driver3->uart_ = motor3->uart;
+
 	set_micro_steps_per_step(driver3, motor3->microsteps);
 	set_all_current_percent_values(driver3, motor3->current_settings.RUN_CURRENT_PERCENT, motor3->current_settings.HOLD_CURRENT_PERCENT, 0);
 
-	motor3->driver = driver3;
 }
 
-void init_motor_4(motor_t *motor4, tmc2209_stepper_driver_t *driver4)
+void initMotor4(uart_mode_t UART_MODE)
 {
+	motor_t * motor4 = motors[3];
+	tmc2209_stepper_driver_t * driver4 = motor4->driver;
+
+	motor4->gpio_pins.mot_en 	= MOT_EN_4_Pin;
+	motor4->gpio_ports.mot_en 	= MOT_EN_4_GPIO_Port;
+
+	tmc2209_set_hardware_enable_pin(driver4, motor4->gpio_pins.mot_en, motor4->gpio_ports.mot_en);
+	tmc2209_disable(driver4);
+
 	initializeDefaults(motor4);
 
 	motor4->ID = '4';
@@ -194,17 +250,24 @@ void init_motor_4(motor_t *motor4, tmc2209_stepper_driver_t *driver4)
 
 	motor4->gpio_pins.step 		= STEP_4_Pin;
 	motor4->gpio_pins.dir 		= DIR_4_Pin;
-	motor4->gpio_pins.mot_en 	= MOT_EN_4_Pin;
 //	motor4->gpio_pins.diag 		= DIAG_4_Pin;
 	motor4->gpio_ports.step 	= STEP_4_GPIO_Port;
 	motor4->gpio_ports.dir 		= DIR_4_GPIO_Port;
-	motor4->gpio_ports.mot_en 	= MOT_EN_4_GPIO_Port;
 //	motor4->gpio_ports.diag 		= DIAG_4_GPIO_Port;
 
 	motor4->motion.motor_control_timer = htim4;
 	motor4->status_check_timer = htim9;
 
-	motor4->uart = huart4;
+	if (UART_MODE == MODE_5_UART)
+	{
+		motor4->uart = huart4;
+		tmc2209_setup(driver4, 115200, SERIAL_ADDRESS_0);
+	}
+	else if (UART_MODE == MODE_2_UART)
+	{
+		motor4->uart = huart4;
+		tmc2209_setup(driver4, 115200, SERIAL_ADDRESS_0);
+	}
 
 	motor4->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_4;
 	motor4->motion.HIGH_LIMIT = HIGH_LIMIT_M_4;
@@ -214,18 +277,24 @@ void init_motor_4(motor_t *motor4, tmc2209_stepper_driver_t *driver4)
 	motor4->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_4;
 	motor4->stallguard.STALL_BUFFER = STALL_BUFFER_M_4;
 
-	tmc2209_set_uart(driver4, huart4);
-	tmc2209_set_hardware_enable_pin(driver4, motor4->gpio_pins.mot_en, motor4->gpio_ports.mot_en);
-	tmc2209_setup(driver4, 115200, SERIAL_ADDRESS_0);
-	enable_cool_step(driver4, 0, 1);
+	driver4->uart_ = motor4->uart;
+
 	set_micro_steps_per_step(driver4, motor4->microsteps);
 	set_all_current_percent_values(driver4, motor4->current_settings.RUN_CURRENT_PERCENT, motor4->current_settings.HOLD_CURRENT_PERCENT, 0);
 
-	motor4->driver = driver4;
 }
 
-void init_motor_5(motor_t *motor5, tmc2209_stepper_driver_t *driver5)
+void initMotor5(uart_mode_t UART_MODE)
 {
+	motor_t * motor5 = motors[4];
+	tmc2209_stepper_driver_t * driver5 = motor5->driver;
+
+	motor5->gpio_pins.mot_en 	= MOT_EN_5_Pin;
+	motor5->gpio_ports.mot_en 	= MOT_EN_5_GPIO_Port;
+
+	tmc2209_set_hardware_enable_pin(driver5, motor5->gpio_pins.mot_en, motor5->gpio_ports.mot_en);
+	tmc2209_disable(driver5);
+
 	initializeDefaults(motor5);
 
 	motor5->ID = '5';
@@ -241,30 +310,35 @@ void init_motor_5(motor_t *motor5, tmc2209_stepper_driver_t *driver5)
 
 	motor5->gpio_pins.step 		= STEP_5_Pin;
 	motor5->gpio_pins.dir 		= DIR_5_Pin;
-	motor5->gpio_pins.mot_en 	= MOT_EN_5_Pin;
 	motor5->gpio_ports.step 	= STEP_5_GPIO_Port;
 //	motor5->gpio_pins.diag 		= DIAG_5_Pin;
 	motor5->gpio_ports.dir 		= DIR_5_GPIO_Port;
-	motor5->gpio_ports.mot_en 	= MOT_EN_5_GPIO_Port;
 //	motor5->gpio_ports.diag 		= DIAG_5_GPIO_Port;
 
 	motor5->motion.motor_control_timer = htim8;
 	motor5->status_check_timer = htim10;
 
-	motor5->uart = huart5;
+	if (UART_MODE == MODE_5_UART)
+	{
+		motor5->uart = huart5;
+		tmc2209_setup(driver5, 115200, SERIAL_ADDRESS_0);
+	}
+	else if (UART_MODE == MODE_2_UART)
+	{
+		motor5->uart = huart4;
+		tmc2209_setup(driver5, 115200, SERIAL_ADDRESS_1);
+	}
 
 	motor5->stallguard.POSITION_LIMIT = POSITION_LIMIT_M_5;
 	motor5->stallguard.MAX_CONSECUTIVE_LOW = LOW_COUNTER_THRESHOLD_M_5;
 	motor5->stallguard.MAX_STALLGUARD_VALUE = STALL_MAX_M_5;
 	motor5->stallguard.STALL_BUFFER = STALL_BUFFER_M_5;
 
-	tmc2209_set_uart(driver5, huart5);
-	tmc2209_set_hardware_enable_pin(driver5, motor5->gpio_pins.mot_en, motor5->gpio_ports.mot_en);
-	tmc2209_setup(driver5, 115200, SERIAL_ADDRESS_0);
+	driver5->uart_ = motor5->uart;
+
 	set_micro_steps_per_step(driver5, motor5->microsteps);
 	set_all_current_percent_values(driver5, motor5->current_settings.RUN_CURRENT_PERCENT, motor5->current_settings.HOLD_CURRENT_PERCENT, 0);
 
-	motor5->driver = driver5;
 }
 
 void initializeDefaults(motor_t * motor)
