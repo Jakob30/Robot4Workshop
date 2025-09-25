@@ -102,7 +102,7 @@
 
 #define LOW_COUNTER_THRESHOLD_M_4 1
 #define STALL_MAX_M_4 39.0f
-#define STALL_BUFFER_M_4 8
+#define STALL_BUFFER_M_4 7
 
 //MOTOR 5 defines
 #define GEAR_RATIO_M_5 1

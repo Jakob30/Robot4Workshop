@@ -73,6 +73,17 @@ motor_error_t calculateAngles(float phi[], float theta, float r, float z, float 
 
 	float h = abs(z-LENGTH_SEGMENT_1);
 	float d = sqrtf(r*r + h*h);
+
+	if (d > LENGTH_SEGMENT_2 + LENGTH_SEGMENT_3 + 1e-9 || d < fabs(LENGTH_SEGMENT_2 - LENGTH_SEGMENT_3) - 1e-9)
+		//The arm reaches its maximum length when stretched or
+		//if the TCP is too close to the base origin, this will not work either.
+	{
+		HAL_GPIO_WritePin(LED_red_GPIO_Port, LED_red_Pin, GPIO_PIN_SET);
+		writeDisplay("Arm reaches max/min length");
+		return MOTOR_ERROR;
+	}
+
+
 	phi[0] = theta;
 
 	phi[2] = acos(((r*r) + (h*h) - LENGTH_SEGMENT_3 * LENGTH_SEGMENT_3 - LENGTH_SEGMENT_2 * LENGTH_SEGMENT_2) / (2 * LENGTH_SEGMENT_3 * LENGTH_SEGMENT_2));

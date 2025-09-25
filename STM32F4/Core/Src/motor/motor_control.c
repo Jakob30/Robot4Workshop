@@ -352,7 +352,8 @@ motor_error_t movePolar(float theta, float r, float z, float gripper_direction)
 	motor_error_t error;
 
 	error = calculateAngles(phi, theta, r, z, gripper_direction);
-
+	if (error == MOTOR_ERROR)
+		while (1); // or user can define a custom Fault Handler by calling UsageFault_Handler()
 
 	error = moveAbsolute(phi[0], motors[0]);
 	error = moveAbsolute(phi[1], motors[1]);
