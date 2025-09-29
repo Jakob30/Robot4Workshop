@@ -7,9 +7,9 @@
 ../Core/Src/motor/motor_control.c:225:15:moveAbsolute	32	static
 ../Core/Src/motor/motor_control.c:288:15:moveDegrees	24	static
 ../Core/Src/motor/motor_control.c:349:15:movePolar	48	static
-../Core/Src/motor/motor_control.c:365:15:moveToCoordinates	112	static
-../Core/Src/motor/motor_control.c:392:15:openGripper	16	static
-../Core/Src/motor/motor_control.c:399:15:grip	16	static
-../Core/Src/motor/motor_control.c:406:15:moveGripper	32	static
-../Core/Src/motor/motor_control.c:449:15:goHome	24	static
-../Core/Src/motor/motor_control.c:512:6:toggle_inverse_motor_direction	16	static
+../Core/Src/motor/motor_control.c:373:15:moveToCoordinates	112	static
+../Core/Src/motor/motor_control.c:400:15:openGripper	16	static
+../Core/Src/motor/motor_control.c:407:15:grip	16	static
+../Core/Src/motor/motor_control.c:414:15:moveGripper	32	static
+../Core/Src/motor/motor_control.c:457:15:goHome	24	static
+../Core/Src/motor/motor_control.c:521:6:toggle_inverse_motor_direction	16	static

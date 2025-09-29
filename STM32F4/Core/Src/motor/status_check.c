@@ -13,6 +13,8 @@
 #define ALPHA 0.25f
 extern motor_t * motors[];
 
+float stallguard_value, dynamic_stallguard_value;
+
 motor_error_t startStatusChecks(motor_t * motor)
 {
 	HAL_StatusTypeDef status;
@@ -66,6 +68,11 @@ void checkStall(uint16_t stallguard_result, motor_t* motor)
 
 	float dynamic_stall_threshold = k * motor->motion.v - sg->STALL_BUFFER;
 
+	if (motor->ID == '2')
+	{
+		stallguard_value = stallguard_result;
+		dynamic_stallguard_value = dynamic_stall_threshold;
+	}
 
 	if (result < dynamic_stall_threshold)
 	{

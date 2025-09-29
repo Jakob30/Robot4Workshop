@@ -1,0 +1,52 @@
+#settings
+STM32F4/.settings/
+
+#metadata
+STM32F4/.metadata/
+
+#Debug
+STM32F4/Debug/
+STM32F4/debug/
+STM32F4/Release/
+STM32F4/release
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*.bin
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb

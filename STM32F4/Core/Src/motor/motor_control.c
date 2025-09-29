@@ -202,7 +202,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /*
- * Interrupt service routine for timer 9, which periodically invokes status checks.
+ * Interrupt service routine for status_check_timers, which periodically invokes status checks.
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -302,7 +302,7 @@ motor_error_t moveDegrees(float degrees, motor_t* motor)
 		error = MOTOR_ERROR;
 	    return error;
 	}
-	else if (degrees < 1e-5)
+	else if (degrees < -1e-5)
 	{
 		enable_inverse_motor_direction(motor->driver);
 		motor->motion.inverse_motor_direction = 0;
@@ -353,15 +353,22 @@ motor_error_t movePolar(float theta, float r, float z, float gripper_direction)
 
 	error = calculateAngles(phi, theta, r, z, gripper_direction);
 	if (error == MOTOR_ERROR)
-		while (1); // or user can define a custom Fault Handler by calling UsageFault_Handler()
+		while(1);
 
-	error = moveAbsolute(phi[0], motors[0]);
-	error = moveAbsolute(phi[1], motors[1]);
-	error = moveAbsolute(phi[2], motors[2]);
-	error = moveAbsolute(phi[3], motors[3]);
+
+	moveAbsolute(phi[0], motors[0]);
+	moveAbsolute(phi[1], motors[1]);
+	moveAbsolute(phi[2], motors[2]);
+	moveAbsolute(phi[3], motors[3]);
 	return error;
 }
-
+//
+//void moveToCoordinates_(float x, float y, float z, float gripper_direction)
+//{
+//	error = moveToCoordinates(x, y, z, gripper_direction);
+//	if (error == MOTOR_ERROR || error == MOTOR_MOVING_ERROR)
+//		while(1);
+//}
 
 motor_error_t moveToCoordinates(float x, float y, float z, float gripper_direction)
 {
@@ -454,7 +461,8 @@ motor_error_t goHome()
 	if (motors[0]->active_movement_flag ||
 			motors[1]->active_movement_flag ||
 			motors[2]->active_movement_flag ||
-			motors[3]->active_movement_flag)
+			motors[3]->active_movement_flag ||
+			motors[4]->active_movement_flag)
 	{
 		error = MOTOR_MOVING_ERROR;
 		return error;

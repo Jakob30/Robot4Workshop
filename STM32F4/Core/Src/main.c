@@ -76,9 +76,6 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_UART4_Init(void);
-static void MX_UART5_Init(void);
-static void MX_USART3_UART_Init(void);
-static void MX_USART6_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM9_Init(void);
@@ -89,6 +86,9 @@ static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_UART5_Init(void);
+static void MX_USART3_UART_Init(void);
+static void MX_USART6_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
@@ -155,9 +155,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_UART4_Init();
-  MX_UART5_Init();
-  MX_USART3_UART_Init();
-  MX_USART6_UART_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM9_Init();
@@ -168,64 +165,38 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM10_Init();
+  MX_UART5_Init();
+  MX_USART3_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   initAllMotors(MODE_5_UART);
 
   while(start_flag == 0);
-  tmc2209_input_t input;
-  input.bytes = get_input(motors[0]->driver);
 
 
-//  tmc2209_enable(motor3.driver);
-//  moveDegrees(90, &motor2);
-//  moveDegrees(20, &motor4);
-//  moveDegrees(5000, &motor5);
-//  while(motor5.active_movement_flag);
-//
-//  moveDegrees(60, &motor1);
-//
-//  enable_inverse_motor_direction(motor4.driver);
-//  moveDegrees(56, &motor4);
-//
-//  enable_inverse_motor_direction(motor2.driver);
-//  moveDegrees(67, &motor2);
-//
-//  while(motor2.active_movement_flag);
-//
-//  enable_inverse_motor_direction(motor5.driver);
-//  moveDegrees(5000, &motor5);
-//  while(motor5.active_movement_flag);
-//
-//  disable_inverse_motor_direction(motor2.driver);
-//  moveDegrees(90, &motor2);
-//
-//  disable_inverse_motor_direction(motor4.driver);
-//  moveDegrees(20, &motor4);
-//
-//  enable_inverse_motor_direction(motor1.driver);
-//
-//  moveDegrees(60, &motor1);
-//  tmc2209_enable(motor2.driver);
-//  tmc2209_enable(motor3.driver);
-//
+  goHome();
+
+  moveToCoordinates(190, -70, 205, 90);
+  moveToCoordinates(190, -70, 145, 90);
+
+  grip();
+
+  moveToCoordinates(190, -70, 205, 90);
+
+  moveToCoordinates(160, 30, 205, 90);
+  moveToCoordinates(160, 30, 95, 90);
+
+  openGripper();
+
+  moveToCoordinates(160, 30, 205, 90);
+
+
+
 //  HAL_Delay(2000);
-//  moveDegrees(90, &motor2);
-//  moveDegrees(90, &motor4);
-
-
-//  moveDegrees(3000, &motor5);
-//
-//  while(motor5.active_movement_flag)
-//  {
-//	  checkDriverStatus(&motor5);
-//  }
-
-//  goHome();
-//  HAL_Delay(2000);
-////
+//////
 //  moveToCoordinates(190, -70, 205, 90);
-//  HAL_Delay(2000);
-////
+////  HAL_Delay(2000);
+//////
 //  moveToCoordinates(190, -70, 145, 90);
 //  grip();
 //  moveToCoordinates(190, -70, 205, 90);
