@@ -18,47 +18,61 @@
 
 extern motor_t * motors[];
 
+/*
+ * Converts cartesian coordinates to polar coordinates depending on the quadrant.
+ * Angles in degrees.
+ * Coordinates in mm.
+ */
 void toPolar(float x, float y, float * theta_p, float * r_p)
 {
 	if (x < 0 && y >= 0)
 		*theta_p = -atan(y/x);
 	else if (x >= 0 && y > 0)
-		*theta_p = atan (x/y) + M_PI/2;
+		*theta_p = atan(x/y) + M_PI/2;
 	else if (x > 0 && y <= 0)
-		*theta_p = -atan (y/x) + M_PI;
+		*theta_p = -atan(y/x) + M_PI;
 	else if (x <= 0 && y < 0)
-		*theta_p = atan (x/y) + 3*M_PI/2;
+		*theta_p = atan(x/y) + 3*M_PI/2;
 
 	*r_p = sqrtf(x*x + y*y);
 }
 
+/*
+ * Detects, whether the desired angles are possible to reach and writes a message to the display if not.
+ */
 motor_error_t checkPositionLimits(float phi, float LOW_LIMIT, float HIGH_LIMIT, uint8_t id)
 {
 	motor_error_t error = NO_ERROR;
 	if (phi < LOW_LIMIT)
 	{
-		HAL_GPIO_WritePin(LED_red_GPIO_Port, LED_red_Pin, GPIO_PIN_SET);
-		char asdf[64];
-		snprintf(asdf, sizeof(asdf), "phi %d is too low", id);
-		writeDisplay(asdf);
+		HAL_GPIO_WritePin(LED_red_GPIO_Port, LED_red_Pin, GPIO_PIN_SET); //Turn the red LED on.
+		char limit_position_msg[64];
+		snprintf(limit_position_msg, sizeof(limit_position_msg), "phi %d is too low", id); //Used to store variables in a string.
+		writeDisplay(limit_position_msg);
 		error = MOTOR_ERROR;
 	}
 	else if (phi > HIGH_LIMIT)
 	{
 		HAL_GPIO_WritePin(LED_red_GPIO_Port, LED_red_Pin, GPIO_PIN_SET);
-		char asdf[64];
-		snprintf(asdf, sizeof(asdf), "phi %d is too high", id);
-		writeDisplay(asdf);
+		char limit_position_msg[64];
+		snprintf(limit_position_msg, sizeof(limit_position_msg), "phi %d is too high", id);
+		writeDisplay(limit_position_msg);
 		error = MOTOR_ERROR;
 	}
 	return error;
 }
 
+/*
+ * To move the motor to the desired coordinates, we need to calculate the degrees each motor has to rotate.
+ * Angles in degrees.
+ * Coordinates in mm.
+ */
 motor_error_t calculateAngles(float phi[], float theta, float r, float z, float gripper_direction)
 {
 	motor_error_t error = NO_ERROR;
 	gripper_direction = toRad(gripper_direction);
 
+	//Calculate r and z to joint C as following calculations demand only length till joint C
 	z += LENGTH_SEGMENT_4 * sin(gripper_direction);
 	r -= LENGTH_SEGMENT_4 * cos(gripper_direction);
 
@@ -71,8 +85,8 @@ motor_error_t calculateAngles(float phi[], float theta, float r, float z, float 
 		return error;
 	}
 
-	float h = abs(z-LENGTH_SEGMENT_1);
-	float d = sqrtf(r*r + h*h);
+	float h = abs(z-LENGTH_SEGMENT_1); //height (vertical distance between joint C and joint A)
+	float d = sqrtf(r*r + h*h); //distance (distance between joint C and joint A)
 
 	if (d > LENGTH_SEGMENT_2 + LENGTH_SEGMENT_3 + 1e-9 || d < fabs(LENGTH_SEGMENT_2 - LENGTH_SEGMENT_3) - 1e-9)
 		//The arm reaches its maximum length when stretched or

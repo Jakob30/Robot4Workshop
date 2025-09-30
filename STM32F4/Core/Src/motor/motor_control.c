@@ -15,26 +15,18 @@
 extern motor_t *motors[]; //To gain access to motor variables in interrupt service routine
 
 #define NUMBER_OF_MOTOR 5
-#define NUMBER_JOINTS 4
-
-/*
- * Function Declaration
- */
 
 
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode);
 motor_error_t startMovement(motor_t * motor);
 void stopMotorMovement(motor_t * motor);
-
 static inline void trapezMove(motion_t * mt);
-
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef* htim);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-
 motor_error_t moveGripper(gripper_close_open_t direction);
-
 void toggle_inverse_motor_direction(tmc2209_stepper_driver_t* stepper_driver);
+
 
 void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
 {
@@ -45,6 +37,9 @@ void initMovementVars(motor_t * motor, motion_mode_t motion_mode)
 	motor->stallguard.stall_flag = 0;
 }
 
+/*
+ * Starts the timer to start interrupts which are necessary for the motor movement.
+ */
 motor_error_t startMovement(motor_t * motor)
 {
 	HAL_StatusTypeDef status;
@@ -62,6 +57,9 @@ motor_error_t startMovement(motor_t * motor)
 	return error;
 }
 
+/*
+ * Stops the motor movement by stopping the timer.
+ */
 void stopMotorMovement(motor_t * motor)
 {
 	HAL_TIM_OC_Stop_IT(&motor->motion.motor_control_timer, TIM_CHANNEL_1);
@@ -174,6 +172,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 			break;
 		}
 		mt->step++;
+		//Track the position of motors in steps.
 		if (mt->inverse_motor_direction)
 			mt->position--;
 		else
@@ -218,10 +217,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			break;
 		}
 	}
-//	writeDisplay("HAHA");
 }
 
-
+/*
+ * Moves a motor by degrees but in absolute matters.
+ * When a motor already moved 40 degrees from its starting position,
+ * calling this function again with 40 degrees will not move the motor since the motor is already at 40 degrees.
+ */
 motor_error_t moveAbsolute(float degrees, motor_t* motor)
 {
 	motor_error_t error = NO_ERROR;
@@ -236,15 +238,18 @@ motor_error_t moveAbsolute(float degrees, motor_t* motor)
 		return error;
 	}
 
+	//Enable driver if not already enabled.
 	if (HAL_GPIO_ReadPin(motor->gpio_ports.mot_en, motor->gpio_pins.mot_en) == GPIO_PIN_SET)
 		tmc2209_enable(motor->driver);
 
-	int actualSteps = toSteps(degrees, motor); //Convert degrees to steps
+	int actualSteps = toSteps(degrees, motor);
 
+	//Based on current position, the motor is moved in different directions.
 	if (actualSteps > motor->motion.position)
 	{
 		motor->motion.inverse_motor_direction = 0;
 		enable_inverse_motor_direction(motor->driver);
+		//Calculate the steps needed to go to target angle.
 		motor->motion.total_steps = actualSteps - motor->motion.position;
 	}
 	else
@@ -254,6 +259,7 @@ motor_error_t moveAbsolute(float degrees, motor_t* motor)
 		motor->motion.total_steps = motor->motion.position - actualSteps;
 	}
 
+	//Calculating steps for trapez motion profile.
 	motor->motion.acc_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.ACC_MAX); //Calculate total acceleration and deceleration steps
 	motor->motion.dec_steps = (motor->motion.V_MAX * motor->motion.V_MAX) / (2 * motor->motion.DEC_MAX);
 	motor->motion.const_steps = motor->motion.total_steps - (motor->motion.acc_steps + motor->motion.dec_steps);
@@ -261,8 +267,8 @@ motor_error_t moveAbsolute(float degrees, motor_t* motor)
 	motion_mode_t motion_mode = MOTION_TRAPEZ;
 
 	initMovementVars(motor, motion_mode);
-
-	if (motor->motion.const_steps < 0)	//If acceleration steps + deceleration steps are bigger than total steps
+	//If acceleration steps + deceleration steps are bigger than total steps, do a triangle like movement.
+	if (motor->motion.const_steps < 0)
 	{
 		motor->motion.acc_steps = motor->motion.total_steps / 2;
 		motor->motion.dec_steps = motor->motion.total_steps / 2;
