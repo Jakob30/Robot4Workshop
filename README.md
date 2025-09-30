@@ -1,7 +1,7 @@
 # Roboterarm – Aufbau und Inbetriebnahme
 
 <p align="center">
-    <img src="./roboterarm_bild.jpeg" alt="Roboterarm" width="400"/>
+    <img src="Bilder/roboterarm_bild.jpeg" alt="Roboterarm" width="400"/>
 </p>    
 
 Dieses Projekt beschreibt den Aufbau und die Inbetriebnahme eines Roboterarms, der mithilfe von 3D-gedruckten Teilen, einer selbstgefertigten Platine und einem STM32F4-Mikrocontroller gesteuert wird.  
