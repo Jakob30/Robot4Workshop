@@ -361,7 +361,7 @@ motor_error_t movePolar(float theta, float r, float z, float gripper_direction)
 	if (error == MOTOR_ERROR)
 		while(1);
 
-
+	HAL_GPIO_WritePin(LED_green_GPIO_Port, LED_green_Pin, GPIO_PIN_SET); //Turn the green LED on.
 	moveAbsolute(phi[0], motors[0]);
 	moveAbsolute(phi[1], motors[1]);
 	moveAbsolute(phi[2], motors[2]);
@@ -400,6 +400,8 @@ motor_error_t moveToCoordinates(float x, float y, float z, float gripper_directi
   		checkDriverStatus(motors[2]);
   		checkDriverStatus(motors[3]);
   	}
+
+	HAL_GPIO_WritePin(LED_green_GPIO_Port, LED_green_Pin, GPIO_PIN_RESET); //Turn the green LED off.
 	return error;
 }
 
@@ -475,6 +477,7 @@ motor_error_t goHome()
 	};
 
 	writeDisplay("Homing...");
+	HAL_GPIO_WritePin(LED_yellow_GPIO_Port, LED_yellow_Pin, GPIO_PIN_SET); //Turn the yellow LED on.
 
 	for (int i = 0; i < NUMBER_OF_MOTOR; i++)
 	{
@@ -520,6 +523,7 @@ motor_error_t goHome()
 	motors[4]->motion.position = 0;
 
 	writeDisplay("Homing finished");
+	HAL_GPIO_WritePin(LED_yellow_GPIO_Port, LED_yellow_Pin, GPIO_PIN_RESET); //Turn the yellow LED off.
 
 	return error;
 }

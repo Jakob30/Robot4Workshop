@@ -183,13 +183,14 @@ int main(void)
 
   moveToCoordinates(190, -70, 205, 90);
 
-  moveToCoordinates(160, 30, 205, 90);
-  moveToCoordinates(160, 30, 95, 90);
+  moveToCoordinates(165, 40, 205, 90);
+  moveToCoordinates(165, 40, 95, 90);
 
   openGripper();
 
   moveToCoordinates(160, 30, 205, 90);
 
+  moveToCoordinates(390, -70, 205, 90); // this coordinate not reachable
 
 
 //  HAL_Delay(2000);
