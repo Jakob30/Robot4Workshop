@@ -1,11 +1,6 @@
-All files nedded to open the Assembly of the complete model are in this Folder.
-
-You need Creo8 or newer Versions to open the files.
-To open everything you need to define the Folder as working space and open the "roboterarm_gesamt.asm"
-
-Missing are detailed electronics, threaded inserts and most of the screws and washers.
-
 # 3D Modelle Roboterarm
+
+Die M3-Einschmelzmuttern sind rot eingefärbt. Verschraubungen vollständig im Modell.
 
 ## Creo8 Modell
 Alle 3D-Modelle der einzelnen Teile befinden sich im Ordner **`Creo8 Modelle`**.  
