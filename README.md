@@ -11,7 +11,7 @@ Dieses Projekt beschreibt den Aufbau und die Inbetriebnahme eines Roboterarms, d
 ## 📦 Vorbereitung
 
 1. **3D-Druckteile**  
-   - Alle benötigten Teile laut STL-Dateien ausdrucken.  
+   - Alle benötigten Teile laut STL-Dateien ausdrucken. Detaillierte Anweisungen befinden sich in dieser [README im Roboterarm Ordner](./Roboterarm/README.md).
    - Qualität und Stabilität der Teile prüfen.  
 
 2. **Bestellung von Bauteilen**  
@@ -21,18 +21,17 @@ Dieses Projekt beschreibt den Aufbau und die Inbetriebnahme eines Roboterarms, d
 
 ## 🔧 Zusammenbau
 
-1. Wenn alle 3D-Druckteile und Bauteile vorhanden sind, den Arm gemäß der **Montageanleitung** zusammenbauen.  
-2. Darauf achten, dass alle Schrauben und Lagerungen fest, aber nicht zu stark angezogen sind.  
+Wenn alle 3D-Druckteile und Bauteile vorhanden sind, den Arm gemäß der [**Montageanleitung**](./Roboterarm/Montagehinweise.pdf) zusammenbauen.   
 
 ---
 
 ## 🖥️ Platine (PCB)
 
 1. **Fertigung**  
-   - Platinendaten herunterladen und bei einem Hersteller fertigen lassen.  
+   - Platinendaten herunterladen und bei einem Hersteller fertigen lassen. Hinweise zur Platinenfertigung findet man im [Elektronik Ordner](./Elektronik/README.md).
 
 2. **Bestückung**  
-   - Bauteile wie Headerpins und Widerstände auf die Platine löten.  
+   - Bauteile wie Headerpins und Widerstände auf die Platine löten (siehe [README im Elektronik Ordner](./Elektronik/README.md)).  
    - Anschließend können Treiber, Nucleoboard und OLED aufgesteckt werden.
 
 3. **Stromversorgung**  
@@ -44,15 +43,15 @@ Dieses Projekt beschreibt den Aufbau und die Inbetriebnahme eines Roboterarms, d
 
 1. **Setup**  
    - [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html) installieren.  
-   - Projektdateien importieren.  
-
-2. **Anpassung**  
-   - Bewegungen werden im `main.c` programmiert.  
+   - Projektdateien aus [STM32F4 Ordner](./STM32F4/) importieren.
+  
+2. **Stromversorgung**  
+   - Platine mit Akku oder Netzgerät mit Versorgungsspannung von ca. 15V verbinden.  
+   - Schalter umlegen. 
+  
+3. **Anpassung** 
+   - Bewegungen werden im `main.c` programmiert und alle aufzurufenden Funktionen sind in [README](./STM32F4/README.md) beschrieben.  
    - Code per USB auf den Mikrocontroller hochladen.  
-
-3. **Stromversorgung**  
-   - Platine mit Akku verbinden.  
-   - Schalter umlegen.  
 
 ---
 
